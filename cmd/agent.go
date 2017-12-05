@@ -22,7 +22,7 @@ import (
 
 // updateAgentCmd represents the updateAgent command
 var updateAgentCmd = &cobra.Command{
-	Use:   "updateAgent",
+	Use:   "agent",
 	Short: "Режим запуска агента обновления",
 	Long: `Данный режим работает по HTTP (REST API) с базой данных.
 Возможности:

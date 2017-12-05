@@ -30,7 +30,7 @@ var RootCmd = &cobra.Command{
 	Use:   "go-AutoUpdate1C",
 	Short: "Автоматические обновление 1С",
 	Long: `Приложение для автоматизации процесса обновления конфигураций баз данных 1С
-Позволяет работать в режиме агента обновлений (см. справку к команде updateAgent)`,
+Позволяет работать в режиме агента обновлений (см. справку к команде agent)`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -45,7 +45,7 @@ func Execute() {
 	}
 }
 
-func init() { 
+func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
@@ -53,8 +53,8 @@ func init() {
 	// will be global for your application.
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "файл настроек программы (По умолчанию $HOME/.go-AutoUpdate1C.yaml)")
 
-	RootCmd.PersistentFlags().StringVarP(&v8version, "v8version", "v","8.3", "Версия платформы 1С.Предприятие")
-	RootCmd.PersistentFlags().StringVarP(&workDir, "work-dir", "d","", "Каталог выполнения программы")
+	RootCmd.PersistentFlags().StringVarP(&v8version, "v8version", "v", "8.3", "Версия платформы 1С.Предприятие")
+	RootCmd.PersistentFlags().StringVarP(&workDir, "work-dir", "d", "", "Каталог выполнения программы")
 
 }
 

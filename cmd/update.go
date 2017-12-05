@@ -23,14 +23,10 @@ import (
 
 // updateDBCmd represents the updateDB command
 var updateDBCmd = &cobra.Command{
-	Use:   "updateDB",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use:   "update",
+	Short: "Обновление конфигурации информационной базы",
+	Long: `Команда производит обновление конфигурацию информационной базы
+	Возможно загрука конфигурации в базу данных, вместо обновления`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("updateDB called")
 	},
@@ -39,13 +35,14 @@ to quickly create a Cobra application.`,
 func init() {
 	RootCmd.AddCommand(updateDBCmd)
 
-	var СтрокаСоединенияСБазой string
-	updateDBCmd.Flags().StringVarP(&СтрокаСоединенияСБазой,"db-path", "c", "", "строка подключения к базе данных")
-	updateDBCmd.Flags().StringVarP(&СтрокаСоединенияСБазой,"user", "u", "", "пользователь для подключения к базе данных")
-	updateDBCmd.Flags().StringVarP(&СтрокаСоединенияСБазой,"password", "p", "", "пароль пользователя для подключения к базе данных")
+	updateDBCmd.Flags().StringP("db", "c", "", "Строка подключения к информационной базе")
+	updateDBCmd.Flags().StringP("db-user", "u", "", "Пользователь информационной базы")
+	updateDBCmd.Flags().StringP("db-pwd", "p", "", "Пароль пользователя информационной базы")
 
-	updateDBCmd.Flags().StringVarP(&СтрокаСоединенияСБазой,"update-file", "f", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")
-	updateDBCmd.Flags().StringVarP(&СтрокаСоединенияСБазой,"uc-code", "", "", "код доступа к заблокированной базе данных (/UC)")
+	updateDBCmd.Flags().StringP("update-file", "f", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")
+	updateDBCmd.Flags().StringP("uc-code", "", "", "Ключ разрешения запуска")
+
+	updateDBCmd.Flags().BoolP("load-cf", "l",false, "Выполнить загрузку конфигурации из файла, вместо обновления")
 
 	// Here you will define your flags and configuration settings.
 

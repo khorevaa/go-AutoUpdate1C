@@ -23,18 +23,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
-var v8version string
-
+var cfgFile, v8version, workDir string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "go-AutoUpdate1C",
 	Short: "Автоматические обновление 1С",
 	Long: `Приложение для автоматизации процесса обновления конфигураций баз данных 1С
-Позволяет рабтать в нескольких режимах:
-- режим обновление (см. справку к команде updateDB)
-- редим агента обновления.(см. справку к команде updateAgent)`,
+Позволяет работать в режиме агента обновлений (см. справку к команде updateAgent)`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -55,14 +51,11 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.go-AutoUpdate1C.yaml)")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "файл настроек программы (По умолчанию $HOME/.go-AutoUpdate1C.yaml)")
 
-	RootCmd.PersistentFlags().StringVar(&v8version, "v8version", "8.3", "config file (default is $HOME/.go-AutoUpdate1C.yaml)")
+	RootCmd.PersistentFlags().StringVarP(&v8version, "v8version", "v","8.3", "Версия платформы 1С.Предприятие")
+	RootCmd.PersistentFlags().StringVarP(&workDir, "work-dir", "d","", "Каталог выполнения программы")
 
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -87,6 +80,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		fmt.Println("Использую файл настроек:", viper.ConfigFileUsed())
 	}
 }

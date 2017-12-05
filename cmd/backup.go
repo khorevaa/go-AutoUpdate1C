@@ -21,30 +21,27 @@ import (
 )
 
 // backupDBCmd represents the backupDB command
-var backupDBCmd = &cobra.Command{
-	Use:   "backupDB",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+var backupCmd = &cobra.Command{
+	Use:   "backup",
+	Short: "Создание бекап информационной базы данных",
+	Long: `Команда создает бекап информационной базы данных и размещает его в указанном месте`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("backupDB called")
 	},
 }
 
 func init() {
-	RootCmd.AddCommand(backupDBCmd)
 
-	// Here you will define your flags and configuration settings.
+	RootCmd.AddCommand(backupCmd)
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// backupDBCmd.PersistentFlags().String("foo", "", "A help for foo")
+	backupCmd.PersistentFlags().StringP("db", "c", "", "Строка подключения к информационной базе")
+	backupCmd.PersistentFlags().StringP("db-user", "u", "", "Пользователь информационной базы")
+	backupCmd.PersistentFlags().StringP("db-pwd", "p", "", "Пароль пользователя информационной базы")
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// backupDBCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	backupCmd.Flags().StringP("backup-file", "f", "", "Путь к файлу бекапа")
+	backupCmd.Flags().BoolP("use-temp-file", "", false, "Делать промежуточный файл букапа, а потом копировать в укзанное место")
+	backupCmd.Flags().BoolP("rewrite-file", "", true, "Флаг перезаписи существующего файла бекапа")
+
+	backupCmd.Flags().StringP("uc-code", "", "", "Ключ разрешения запуска")
+
 }

@@ -23,13 +23,13 @@ import (
 // updateAgentCmd represents the updateAgent command
 var updateAgentCmd = &cobra.Command{
 	Use:   "updateAgent",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Режим запуска агента обновления",
+	Long: `Данный режим работает по HTTP (REST API) с базой данных.
+Возможности:
+	* самостоятельно получает список информационных баз к обновления;
+	* поддержание нескольких потоков обновления
+	* переодический/разовый опрос необходимости обновления
+	* отправка журнала обновления на url.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("updateAgent called")
 	},
@@ -44,7 +44,11 @@ func init() {
 	// and all subcommands, e.g.:
 	// updateAgentCmd.PersistentFlags().String("foo", "", "A help for foo")
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// updateAgentCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	updateAgentCmd.Flags().StringP("rest-url", "r", "", "Сервер с REST API для получения списка и настроек обновления информационных баз")
+	updateAgentCmd.Flags().StringP("rest-user", "u", "", "Пользователь для подключения к серверу REST API")
+	updateAgentCmd.Flags().StringP("rest-pwd", "p", "", "Пароль пользователя для подключения к серверу REST API")
+	updateAgentCmd.Flags().Int8P("timer", "t", 0, "Переодичность опроса сервера REST API в минутах (0 - отключено)")
+
+	updateAgentCmd.Flags().Int8P("count-threads", "d", 1, "Количество одновременно работающих процесссов (0 - отключено)")
+
 }

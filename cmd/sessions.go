@@ -24,10 +24,9 @@ import (
 var sessionsCmd = &cobra.Command{
 	Use:   "sessions",
 	Short: "Управление сеансами в базе данных",
-	Long: ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("sessions called")
-	},
+	Long: `Требуется указание подкоманды запуска, например, 'session lock'`,
+	RunE: nil,
+	TraverseChildren: true,
 }
 
 // lockDBCmd represents the lockDB command
@@ -56,8 +55,9 @@ func init() {
 	sessionsCmd.AddCommand(lockDBCmd)
 	sessionsCmd.AddCommand(unlockDBCmd)
 	// Here you will define your flags and configuration settings.
+	sessionsCmd.PersistentFlags().StringP("ras", "r", "localhost:1545", "Сетевой адрес RAS")
 
-	sessionsCmd.PersistentFlags().StringP("db", "c", "", "A help for foo")
+	sessionsCmd.PersistentFlags().StringP("db", "c", "", "Строка подключения к информационной базе")
 	sessionsCmd.PersistentFlags().StringP("db-user", "u", "", "Пользователь информационной базы")
 	sessionsCmd.PersistentFlags().StringP("db-pwd", "p", "", "Пароль пользователя информационной базы")
 
@@ -69,9 +69,7 @@ func init() {
 	lockDBCmd.Flags().StringP("lock-start", "", "", "Время старта блокировки пользователей, время указываем как '2040-12-31T23:59:59'")
 	lockDBCmd.Flags().StringP("lock-started", "", "", "Время старта блокировки через n сек")
 
-	sessionsCmd.PersistentFlags().StringP("cluster-pwd", "", "", "A help for foo")
-
-	sessionsCmd.Flags().String("command", "", "Команда действия")
+	unlockDBCmd.Flags().StringP("uc-code", "", "", "Ключ разрешения запуска")
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:

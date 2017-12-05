@@ -15,11 +15,15 @@
 package cmd
 
 import (
-	"fmt"
 
 	"github.com/spf13/cobra"
+	"go-AutoUpdate1C/update"
 
 )
+
+var db, dbUser, dbPwd, ucCode string
+var updateFile string
+var loadCf bool
 
 // updateDBCmd represents the updateDB command
 var updateDBCmd = &cobra.Command{
@@ -27,22 +31,32 @@ var updateDBCmd = &cobra.Command{
 	Short: "Обновление конфигурации информационной базы",
 	Long: `Команда производит обновление конфигурацию информационной базы
 	Возможно загрука конфигурации в базу данных, вместо обновления`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("updateDB called")
-	},
+	RunE: updateFunc,
+}
+
+func updateFunc(cmd *cobra.Command, args []string) (err error) {
+
+	Обновлятор := update.НовоеОбновление(db, dbUser, dbPwd, ucCode)
+	Обновлятор.УстановитьВерсиюПлатформы(v8version)
+	Обновлятор.ФайлОбновления = updateFile
+	Обновлятор.ВыполнитьЗагрузкуВместоОбновения = loadCf
+
+	err = Обновлятор.ВыполнитьОбновление()
+
+	return
 }
 
 func init() {
 	RootCmd.AddCommand(updateDBCmd)
 
-	updateDBCmd.Flags().StringP("db", "c", "", "Строка подключения к информационной базе")
-	updateDBCmd.Flags().StringP("db-user", "u", "", "Пользователь информационной базы")
-	updateDBCmd.Flags().StringP("db-pwd", "p", "", "Пароль пользователя информационной базы")
+	updateDBCmd.Flags().StringVarP(&db,"db", "c", "", "Строка подключения к информационной базе")
+	updateDBCmd.Flags().StringVarP(&dbUser,"db-user", "u", "", "Пользователь информационной базы")
+	updateDBCmd.Flags().StringVarP(&dbPwd,"db-pwd", "p", "", "Пароль пользователя информационной базы")
 
-	updateDBCmd.Flags().StringP("update-file", "f", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")
-	updateDBCmd.Flags().StringP("uc-code", "", "", "Ключ разрешения запуска")
+	updateDBCmd.Flags().StringVarP(&updateFile,"update-file", "f", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")
+	updateDBCmd.Flags().StringVarP(&ucCode,"uc-code", "", "", "Ключ разрешения запуска")
 
-	updateDBCmd.Flags().BoolP("load-cf", "l",false, "Выполнить загрузку конфигурации из файла, вместо обновления")
+	updateDBCmd.Flags().BoolVarP(&loadCf, "load-cf", "l",false, "Выполнить загрузку конфигурации из файла, вместо обновления")
 
 	// Here you will define your flags and configuration settings.
 

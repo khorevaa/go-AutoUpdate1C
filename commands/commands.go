@@ -1,8 +1,9 @@
 package commands
 
 import (
+	"github/Khorevaa/go-AutoUpdate1C/config"
+
 	"github.com/jawher/mow.cli"
-	"go-AutoUpdate1C/config"
 )
 
 var Commands = []Command{

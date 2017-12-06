@@ -20,8 +20,8 @@ import (
 	"github.com/jawher/mow.cli"
 	"os"
 	//"github.com/spf13/cobra"
-	"go-AutoUpdate1C/commands"
-	"go-AutoUpdate1C/config"
+	"github/Khorevaa/go-AutoUpdate1C/commands"
+	"github/Khorevaa/go-AutoUpdate1C/config"
 )
 
 func main() {

@@ -15,11 +15,12 @@
 package commands
 
 import (
-	"github.com/jawher/mow.cli"
-	"go-AutoUpdate1C/config"
-	"go-AutoUpdate1C/update"
+	"github/Khorevaa/go-AutoUpdate1C/config"
+	"github/Khorevaa/go-AutoUpdate1C/update"
 
-	log "github.com/sirupsen/logrus"
+	"github/Khorevaa/go-AutoUpdate1C/logging"
+
+	"github.com/jawher/mow.cli"
 )
 
 type Update struct{}
@@ -34,15 +35,15 @@ func (_ Update) Init(config config.Config) func(*cli.Cmd) {
 	updateInit := func(cmd *cli.Cmd) {
 		// These are the command specific options and args, nicely scoped inside a func
 		var (
-			loadCf    = cmd.BoolOpt("l load-cf", false, "Выполнить загрузку конфигурации из файла, вместо обновления")
-			dbUser    = cmd.StringOpt("u db-user", "Администратор", "Пользователь информационной базы")
-			dbPwd     = cmd.StringOpt("p db-pwd", "", "Пароль пользователя информационной базы")
-			ucCode    = cmd.StringOpt("uc", "", "Ключ разрешения запуска")
+			loadCf    = cmd.BoolOpt("load-cf l", false, "Выполнить загрузку конфигурации из файла, вместо обновления")
+			dbUser    = cmd.StringOpt("db-user w", "Администратор", "Пользователь информационной базы")
+			dbPwd     = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			ucCode    = cmd.StringOpt("uc-code uc", "", "Ключ разрешения запуска")
 			db        = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
 			updateDir = cmd.StringArg("FILE", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")
 		)
 
-		logUpdate := config.Log().NewContextLogger(log.Fields{
+		logUpdate := config.Log().NewContextLogger(logging.LogFeilds{
 			"command": "update",
 		})
 
@@ -58,7 +59,7 @@ func (_ Update) Init(config config.Config) func(*cli.Cmd) {
 			workErr := Обновлятор.ВыполнитьОбновление()
 
 			if workErr != nil {
-				logUpdate(log.Fields{
+				logUpdate(logging.LogFeilds{
 					"db":        *db,
 					"updateDir": *updateDir,
 					"loadCf":    *loadCf,

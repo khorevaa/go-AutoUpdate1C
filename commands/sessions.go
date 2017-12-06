@@ -15,38 +15,177 @@
 package commands
 
 import (
-	"fmt"
+	"github/Khorevaa/go-AutoUpdate1C/config"
+	"github/Khorevaa/go-AutoUpdate1C/update"
 
-	"github.com/spf13/cobra"
+	"github/Khorevaa/go-AutoUpdate1C/logging"
+
+	"github.com/jawher/mow.cli"
+
+	"time"
 )
 
-// sessionsCmd represents the sessions command
-var sessionsCmd = &cobra.Command{
-	Use:              "sessions",
-	Short:            "Управление сеансами в базе данных",
-	Long:             `Требуется указание подкоманды запуска, например, 'session lock'`,
-	RunE:             nil,
-	TraverseChildren: true,
+type Sessions struct {
+	subCommands []Command
 }
 
-// lockDBCmd represents the lockDB command
-var lockDBCmd = &cobra.Command{
-	Use:   "lock",
-	Short: "Установить блокировку соединений с базой данных",
-	Long:  "",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("lockDB called")
-	},
+type SessionsLock struct {
+	subCommands []Command
+}
+type SessionsUnLock struct {
+	subCommands []Command
 }
 
-// unlockDBCmd represents the unlockDB command
-var unlockDBCmd = &cobra.Command{
-	Use:   "unlock",
-	Short: "Снять блокировку соединений с базой данных",
-	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("unlockDB called")
-	},
+func (_ Sessions) Name() string { return "sessions s" }
+func (_ Sessions) Desc() string {
+	return "Управление сеансами в информационной базы"
+}
+
+func (c Sessions) Init(config config.Config) func(*cli.Cmd) {
+
+	sessionsInit := func(cmd *cli.Cmd) {
+		// These are the command specific options and args, nicely scoped inside a func
+
+		for _, subCommand := range c.subCommands {
+			cmd.Command(subCommand.Name(), subCommand.Desc(), subCommand.Init(config))
+		}
+
+		//cmd.Spec = "[-l --uc -u -p]"
+	}
+
+	return sessionsInit
+}
+
+func (_ SessionsUnLock) Name() string { return "unlock ul" }
+func (_ SessionsUnLock) Desc() string {
+	return "Снять блокировку соединений"
+}
+
+func (c SessionsUnLock) Init(config config.Config) func(*cli.Cmd) {
+
+	return func(cmd *cli.Cmd) {
+		// These are the command specific options and args, nicely scoped inside a func
+
+		for _, subCommand := range c.subCommands {
+			cmd.Command(subCommand.Name(), subCommand.Desc(), subCommand.Init(config))
+		}
+
+		lockStart := Duration(0)
+		var (
+			dbUser    = cmd.StringOpt("db-user w", "Администратор", "Пользователь информационной базы")
+			dbPwd     = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			ucCode    = cmd.StringOpt("uc-code uc", "", "Ключ разрешения запуска")
+			rac       = cmd.StringOpt("rac r", "localhost:1545", "Сетевой адрес RAS")
+			updateDir = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
+
+			lockMessage = cmd.StringOpt("lock-message m", "", "Ключ разрешения запуска")
+		)
+
+		cmd.VarOpt("lock-start s", &lockStart, "Время старта блокировки пользователей, время указываем как '2040-12-31T23:59:59")
+		cmd.VarOpt("lock-end s", &lockStart, "Время старта блокировки пользователей, время указываем как '2040-12-31T23:59:59")
+
+		logUpdate := config.Log().NewContextLogger(logging.LogFeilds{
+			"command": "update",
+		})
+
+		// What to run when this command is called
+		cmd.Action = func() {
+			// Inside the action, and only inside, you can safely access the values of the options and arguments
+
+			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd, *ucCode)
+			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
+			Обновлятор.ФайлОбновления = *updateDir
+			Обновлятор.ВыполнитьЗагрузкуВместоОбновения = *loadCf
+			Обновлятор.УстановитьЛог(logUpdate)
+			workErr := Обновлятор.ВыполнитьОбновление()
+
+			if workErr != nil {
+				logUpdate(logging.LogFeilds{
+					"db":        *db,
+					"updateDir": *updateDir,
+					"loadCf":    *loadCf,
+					"ucCode":    *ucCode,
+					"v8":        config.V8,
+				}).WithError(workErr).Error("Ошибка выполнения команды: ")
+			}
+
+		}
+		//cmd.Spec = "[-l --uc -u -p]"
+	}
+
+}
+
+// Declare your type
+type Duration time.Duration
+
+// Make it implement flag.Value
+func (d *Duration) Set(v string) error {
+	parsed, err := time.ParseDuration(v)
+	if err != nil {
+		return err
+	}
+	*d = Duration(parsed)
+	return nil
+}
+
+func (d *Duration) String() string {
+	duration := time.Duration(*d)
+	return duration.String()
+}
+
+func (_ SessionsLock) Name() string { return "lock l" }
+func (_ SessionsLock) Desc() string {
+	return "Установить блокировку соединений"
+}
+
+func (c SessionsLock) Init(config config.Config) func(*cli.Cmd) {
+
+	sessionsInit := func(cmd *cli.Cmd) {
+		// These are the command specific options and args, nicely scoped inside a func
+
+		for _, subCommand := range c.subCommands {
+			cmd.Command(subCommand.Name(), subCommand.Desc(), subCommand.Init(config))
+		}
+
+		var (
+			loadCf    = cmd.BoolOpt("load-cf l", false, "Выполнить загрузку конфигурации из файла, вместо обновления")
+			dbUser    = cmd.StringOpt("db-user w", "Администратор", "Пользователь информационной базы")
+			dbPwd     = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			ucCode    = cmd.StringOpt("uc-code uc", "", "Ключ разрешения запуска")
+			db        = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
+			updateDir = cmd.StringArg("FILE", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")
+		)
+
+		logUpdate := config.Log().NewContextLogger(logging.LogFeilds{
+			"command": "update",
+		})
+
+		// What to run when this command is called
+		cmd.Action = func() {
+			// Inside the action, and only inside, you can safely access the values of the options and arguments
+
+			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd, *ucCode)
+			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
+			Обновлятор.ФайлОбновления = *updateDir
+			Обновлятор.ВыполнитьЗагрузкуВместоОбновения = *loadCf
+			Обновлятор.УстановитьЛог(logUpdate)
+			workErr := Обновлятор.ВыполнитьОбновление()
+
+			if workErr != nil {
+				logUpdate(logging.LogFeilds{
+					"db":        *db,
+					"updateDir": *updateDir,
+					"loadCf":    *loadCf,
+					"ucCode":    *ucCode,
+					"v8":        config.V8,
+				}).WithError(workErr).Error("Ошибка выполнения команды: ")
+			}
+
+		}
+		//cmd.Spec = "[-l --uc -u -p]"
+	}
+
+	return sessionsInit
 }
 
 func init() {

@@ -1,8 +1,9 @@
 package config
 
 import (
+	"github/Khorevaa/go-AutoUpdate1C/logging"
+
 	log "github.com/sirupsen/logrus"
-	"go-AutoUpdate1C/logging"
 )
 
 // Profile contains environment specific options

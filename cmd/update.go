@@ -15,7 +15,7 @@
 package cmd
 
 import (
-	"github.com/Khorevaa/go-AutoUpdate1C/update"
+	"go-AutoUpdate1C/update"
 	"github.com/spf13/cobra"
 )
 
@@ -30,6 +30,8 @@ var updateDBCmd = &cobra.Command{
 	Long: `Команда производит обновление конфигурацию информационной базы
 	Возможно загрука конфигурации в базу данных, вместо обновления`,
 	RunE: updateFunc,
+	SilenceUsage:  true,
+
 }
 
 func updateFunc(cmd *cobra.Command, args []string) (err error) {

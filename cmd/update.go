@@ -15,10 +15,8 @@
 package cmd
 
 import (
-
+	"github.com/Khorevaa/go-AutoUpdate1C/update"
 	"github.com/spf13/cobra"
-	"go-AutoUpdate1C/update"
-
 )
 
 var db, dbUser, dbPwd, ucCode string
@@ -49,14 +47,14 @@ func updateFunc(cmd *cobra.Command, args []string) (err error) {
 func init() {
 	RootCmd.AddCommand(updateDBCmd)
 
-	updateDBCmd.Flags().StringVarP(&db,"db", "c", "", "Строка подключения к информационной базе")
-	updateDBCmd.Flags().StringVarP(&dbUser,"db-user", "u", "", "Пользователь информационной базы")
-	updateDBCmd.Flags().StringVarP(&dbPwd,"db-pwd", "p", "", "Пароль пользователя информационной базы")
+	updateDBCmd.Flags().StringVarP(&db, "db", "c", "", "Строка подключения к информационной базе")
+	updateDBCmd.Flags().StringVarP(&dbUser, "db-user", "u", "", "Пользователь информационной базы")
+	updateDBCmd.Flags().StringVarP(&dbPwd, "db-pwd", "p", "", "Пароль пользователя информационной базы")
 
-	updateDBCmd.Flags().StringVarP(&updateFile,"update-file", "f", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")
-	updateDBCmd.Flags().StringVarP(&ucCode,"uc-code", "", "", "Ключ разрешения запуска")
+	updateDBCmd.Flags().StringVarP(&updateFile, "update-file", "f", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")
+	updateDBCmd.Flags().StringVarP(&ucCode, "uc-code", "", "", "Ключ разрешения запуска")
 
-	updateDBCmd.Flags().BoolVarP(&loadCf, "load-cf", "l",false, "Выполнить загрузку конфигурации из файла, вместо обновления")
+	updateDBCmd.Flags().BoolVarP(&loadCf, "load-cf", "l", false, "Выполнить загрузку конфигурации из файла, вместо обновления")
 
 	// Here you will define your flags and configuration settings.
 

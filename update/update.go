@@ -2,6 +2,7 @@ package update
 
 import (
 	"fmt"
+
 	"github.com/Khorevaa/go-v8runner"
 )
 

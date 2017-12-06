@@ -31,6 +31,8 @@ var RootCmd = &cobra.Command{
 	Short: "Автоматические обновление 1С",
 	Long: `Приложение для автоматизации процесса обновления конфигураций баз данных 1С
 Позволяет работать в режиме агента обновлений (см. справку к команде agent)`,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },

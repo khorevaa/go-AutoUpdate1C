@@ -17,7 +17,7 @@ func truncStr(s string, l int) string {
 
 func failOnErr(err error) {
 	if err != nil {
-		fmt.Printf("Ошибка выполненния программы: %v\n", err)
+		fmt.Printf("Ошибка выполненния программы: %v \n", err.Error())
 		cli.Exit(1)
 	}
 }

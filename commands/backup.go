@@ -46,7 +46,7 @@ func (c Backups) Init(config config.Config) func(*cli.Cmd) {
 			"command": "backup",
 		})
 
-		cmd.Spec = "[-u -p -c] ( [-restore | --rewrite] ) CONNECT FILE"
+		cmd.Spec = "[-u -p -c] ( [--restore | --rewrite] ) CONNECT FILE"
 
 		// What to run when this command is called
 		cmd.Action = func() {
@@ -60,15 +60,25 @@ func (c Backups) Init(config config.Config) func(*cli.Cmd) {
 			var workErr error
 
 			if *restore {
-
+				log := Обновлятор.Log.Context(logging.LogFeilds{
+					"ФайлВыгрузки": *backUpFile,
+				})
+				log.Info("Выполняю загрузку информационной базы")
 				workErr = Обновлятор.ЗагрузитьИнформационнуюБазу(*backUpFile)
+				log.IfError(workErr, "Ошибка загрузки в информационную базу")
 
 			} else {
+				log := Обновлятор.Log.Context(logging.LogFeilds{
+					"ФайлВыгрузки": *backUpFile,
+					"Перазаписать": *rewrite,
+				})
+				log.Info("Выполняю выгрузку информационной базы")
 				workErr = Обновлятор.ВыгрузитьИнформационнуюБазу(*backUpFile)
+				log.IfError(workErr, "Ошибка выгрузки в информационную базу")
 			}
 
 			if workErr != nil {
-				logCommand(logging.LogFeilds{
+				logCommand.Context(logging.LogFeilds{
 					"db":         *db,
 					"dbUser":     *dbUser,
 					"ucCode":     *ucCode,

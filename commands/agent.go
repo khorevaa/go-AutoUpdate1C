@@ -61,7 +61,7 @@ func (c Agent) Init(config config.Config) func(*cli.Cmd) {
 			workErr := errors.New("Команда не реализована") //Обновлятор.ВыполнитьОбновление()
 
 			if workErr != nil {
-				logCommand(logging.LogFeilds{
+				logCommand.Context(logging.LogFeilds{
 					"server":   *server,
 					"restUser": *restUser,
 					"restPwd":  *restPwd,

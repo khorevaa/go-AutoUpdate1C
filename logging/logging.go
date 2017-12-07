@@ -4,7 +4,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type LogFunc func(f LogFeilds) *Log
 type Log struct {
 	*log.Entry
 }
@@ -22,17 +21,29 @@ func init() {
 
 func New() *Logger {
 
-	return &Logger{Logger: log.New()}
+	return &Logger{
+		Logger: log.New(),
+	}
 }
 
-func (l *Logger) NewContextLogger(c LogFeilds) LogFunc {
-	return func(f LogFeilds) *Log {
-		a := log.Fields{}
-		for k, v := range c {
-			a[k] = v
-		}
-		return &Log{
-			Entry: l.WithFields(a),
-		}
+func (l *Logger) NewContextLogger(c LogFeilds) Log {
+	a := log.Fields{}
+	for k, v := range c {
+		a[k] = v
+	}
+	return Log{Entry: l.WithFields(a)}
+}
+
+func (l *Log) Context(c LogFeilds) Log {
+	a := log.Fields{}
+	for k, v := range c {
+		a[k] = v
+	}
+	return Log{Entry: l.WithFields(a)}
+}
+
+func (l *Log) IfError(err error, m ...interface{}) {
+	if err != nil {
+		l.WithError(err).Error(m...)
 	}
 }

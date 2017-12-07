@@ -60,7 +60,7 @@ func (_ Update) Init(config config.Config) func(*cli.Cmd) {
 			workErr := Обновлятор.ВыполнитьОбновление()
 
 			if workErr != nil {
-				logUpdate(logging.LogFeilds{
+				logUpdate.Context(logging.LogFeilds{
 					"db":        *db,
 					"updateDir": *updateDir,
 					"dbUser":    *dbUser,

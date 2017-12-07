@@ -101,7 +101,7 @@ func (c SessionsUnLock) Init(config config.Config) func(*cli.Cmd) {
 			workErr := errors.New("Команда не реализована") // Обновлятор.ВыполнитьОбновление()
 
 			if workErr != nil {
-				logCommand(logging.LogFeilds{
+				logCommand.Context(logging.LogFeilds{
 					"db":           *db,
 					"dbUser":       *dbUser,
 					"ucCode":       *ucCode,
@@ -166,7 +166,7 @@ func (c SessionsLock) Init(config config.Config) func(*cli.Cmd) {
 			workErr := errors.New("Команда не реализована") //Обновлятор.ВыполнитьОбновление()
 
 			if workErr != nil {
-				logCommand(logging.LogFeilds{
+				logCommand.Context(logging.LogFeilds{
 					"db":           *db,
 					"dbUser":       *dbUser,
 					"ucCode":       *ucCode,
@@ -223,7 +223,7 @@ func (_ SessionsKill) Init(config config.Config) func(*cli.Cmd) {
 			workErr := errors.New("Команда не реализована") //Обновлятор.ВыполнитьОбновление()
 
 			if workErr != nil {
-				logCommand(logging.LogFeilds{
+				logCommand.Context(logging.LogFeilds{
 					"db":           *db,
 					"dbUser":       *dbUser,
 					"ucCode":       *ucCode,
@@ -234,6 +234,7 @@ func (_ SessionsKill) Init(config config.Config) func(*cli.Cmd) {
 					"clusterPwd":   *clusterPwd,
 				}).WithError(workErr).Error("Ошибка выполнения команды")
 			}
+			failOnErr(workErr)
 
 		}
 		//cmd.Spec = "[-l --uc -u -p]"

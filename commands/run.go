@@ -59,7 +59,7 @@ func (_ Run) Init(config config.Config) func(*cli.Cmd) {
 			workErr := Обновлятор.ВыполнитьВРежимеПредприятия(*command, *fileEpf, *privileged)
 
 			if workErr != nil {
-				logCommand(logging.LogFeilds{
+				logCommand.Context(logging.LogFeilds{
 					"db":         *db,
 					"fileEpf":    *fileEpf,
 					"dbUser":     *dbUser,

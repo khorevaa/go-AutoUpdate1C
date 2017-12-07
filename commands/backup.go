@@ -15,33 +15,75 @@
 package commands
 
 import (
-	"fmt"
-
-	"github.com/spf13/cobra"
+	"github.com/jawher/mow.cli"
+	"github.com/khorevaa/go-AutoUpdate1C/config"
+	"github.com/khorevaa/go-AutoUpdate1C/logging"
+	"github.com/khorevaa/go-AutoUpdate1C/update"
 )
 
-// backupDBCmd represents the backupDB command
-var backupCmd = &cobra.Command{
-	Use:   "backup",
-	Short: "Создание бекап информационной базы данных",
-	Long:  `Команда создает бекап информационной базы данных и размещает его в указанном месте`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("backupDB called")
-	},
+type Backups struct{}
+
+func (_ Backups) Name() string { return "backup b" }
+func (_ Backups) Desc() string {
+	return "Управление выгрузкой из информационной базы"
 }
 
-func init() {
+func (c Backups) Init(config config.Config) func(*cli.Cmd) {
 
-	RootCmd.AddCommand(backupCmd)
+	sessionsInit := func(cmd *cli.Cmd) {
 
-	backupCmd.PersistentFlags().StringP("db", "c", "", "Строка подключения к информационной базе")
-	backupCmd.PersistentFlags().StringP("db-user", "u", "", "Пользователь информационной базы")
-	backupCmd.PersistentFlags().StringP("db-pwd", "p", "", "Пароль пользователя информационной базы")
+		var (
+			dbUser     = cmd.StringOpt("db-user u", "Администратор", "Пользователь информационной базы")
+			dbPwd      = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			ucCode     = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
+			rewrite    = cmd.BoolOpt("rewrite", false, "Перезаписть существующий файл бекапа")
+			restore    = cmd.BoolOpt("restore r", false, "Вссстановить информационной базы из выгрузки")
+			db         = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
+			backUpFile = cmd.StringArg("FILE", "", "Путь к файлу выгрузки из информационной базы")
+		)
 
-	backupCmd.Flags().StringP("backup-file", "f", "", "Путь к файлу бекапа")
-	backupCmd.Flags().BoolP("use-temp-file", "", false, "Делать промежуточный файл букапа, а потом копировать в укзанное место")
-	backupCmd.Flags().BoolP("rewrite-file", "", true, "Флаг перезаписи существующего файла бекапа")
+		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
+			"command": "backup",
+		})
 
-	backupCmd.Flags().StringP("uc-code", "", "", "Ключ разрешения запуска")
+		cmd.Spec = "[-u -p -c] ( [-restore | --rewrite] ) CONNECT FILE"
 
+		// What to run when this command is called
+		cmd.Action = func() {
+			// Inside the action, and only inside, you can safely access the values of the options and arguments
+
+			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
+			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
+			Обновлятор.УстановитьКлючРазрешенияЗапуска(*ucCode)
+			Обновлятор.УстановитьЛог(logCommand)
+
+			var workErr error
+
+			if *restore {
+
+				workErr = Обновлятор.ЗагрузитьИнформационнуюБазу(*backUpFile)
+
+			} else {
+				workErr = Обновлятор.ВыгрузитьИнформационнуюБазу(*backUpFile)
+			}
+
+			if workErr != nil {
+				logCommand(logging.LogFeilds{
+					"db":         *db,
+					"dbUser":     *dbUser,
+					"ucCode":     *ucCode,
+					"v8":         config.V8,
+					"backUpFile": *backUpFile,
+					"rewrite":    *rewrite,
+					"restore":    *restore,
+				}).WithError(workErr).Error("Ошибка выполнения команды: ")
+			}
+
+			failOnErr(workErr)
+
+		}
+
+	}
+
+	return sessionsInit
 }

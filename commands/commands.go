@@ -1,17 +1,23 @@
 package commands
 
 import (
-	"github/Khorevaa/go-AutoUpdate1C/config"
+	"github.com/khorevaa/go-AutoUpdate1C/config"
 
 	"github.com/jawher/mow.cli"
 )
 
 var Commands = []Command{
 	&Update{},
-	//&List{},
-	//&Read{},
-	//&Run{},
-	//&Task{},
+	&Sessions{
+		subCommands: []Command{
+			&SessionsLock{},
+			&SessionsUnLock{},
+			&SessionsKill{},
+		},
+	},
+	&Run{},
+	&Backups{},
+	&Agent{},
 	//&Tasks{},
 	//&Top{},
 }

@@ -14,30 +14,30 @@
 
 package main
 
-//import "go-AutoUpdate1C/cmd"
 import (
+	"flag"
 	"fmt"
 	"github.com/jawher/mow.cli"
+	"github.com/khorevaa/go-AutoUpdate1C/commands"
+	"github.com/khorevaa/go-AutoUpdate1C/config"
 	"os"
-	//"github.com/spf13/cobra"
-	"github/Khorevaa/go-AutoUpdate1C/commands"
-	"github/Khorevaa/go-AutoUpdate1C/config"
 )
 
 func main() {
 
-	app := cli.App("1updater", "Автоматические обновление 1С")
-	//app.Spec = "[-v] [--v8]"
+	app := cli.App("AutoUpdate1C", "Автоматические обновление 1С")
+
+	app.Version("v version", "1.0")
 
 	var (
-		verbose   = app.BoolOpt("v verbose", false, "Verbose debug mode")
+		debug     = app.BoolOpt("debug", false, "Вывод отладочной информации")
 		v8version = app.StringOpt("v8 v8version", "8.3", "Версия платформы 1С.Предприятие")
 	)
 
 	var help = app.Bool(cli.BoolOpt{
 		Name:      "h help",
 		Value:     false,
-		Desc:      "Show the help info and exit",
+		Desc:      "Показать справку и выйти",
 		HideValue: true,
 	})
 
@@ -45,23 +45,18 @@ func main() {
 		if *help {
 			app.PrintLongHelp()
 		}
-		if *verbose {
-			// Here you can enable debug output in your logger for example
-			fmt.Println("Verbose mode enabled")
+
+		if *debug {
+			fmt.Println("Включен режим отладки")
 		}
 	}
 
-	config := config.Config{
-		V8: *v8version,
-	}
+	app.ErrorHandling = flag.ExitOnError
 
-	//app.After = func() {
-	//	if workErr != nil {
-	//		fmt.Printf("Ошибка выполнения: %v", workErr)
-	//		cli.Exit(1)
-	//	}
-	//
-	//}
+	config := config.Config{
+		V8:    *v8version,
+		Debug: *debug,
+	}
 
 	for _, cmd := range commands.Commands {
 		app.Command(cmd.Name(), cmd.Desc(), cmd.Init(config))

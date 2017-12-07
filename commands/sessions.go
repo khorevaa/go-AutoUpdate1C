@@ -15,14 +15,16 @@
 package commands
 
 import (
-	"github/Khorevaa/go-AutoUpdate1C/config"
-	"github/Khorevaa/go-AutoUpdate1C/update"
+	"github.com/khorevaa/go-AutoUpdate1C/config"
+	"github.com/khorevaa/go-AutoUpdate1C/update"
 
-	"github/Khorevaa/go-AutoUpdate1C/logging"
+	"github.com/khorevaa/go-AutoUpdate1C/logging"
 
 	"github.com/jawher/mow.cli"
 
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type Sessions struct {
@@ -33,6 +35,10 @@ type SessionsLock struct {
 	subCommands []Command
 }
 type SessionsUnLock struct {
+	subCommands []Command
+}
+
+type SessionsKill struct {
 	subCommands []Command
 }
 
@@ -57,9 +63,7 @@ func (c Sessions) Init(config config.Config) func(*cli.Cmd) {
 }
 
 func (_ SessionsUnLock) Name() string { return "unlock ul" }
-func (_ SessionsUnLock) Desc() string {
-	return "Снять блокировку соединений"
-}
+func (_ SessionsUnLock) Desc() string { return "Снять блокировку соединений" }
 func (c SessionsUnLock) Init(config config.Config) func(*cli.Cmd) {
 
 	sessionsInit := func(cmd *cli.Cmd) {
@@ -70,38 +74,45 @@ func (c SessionsUnLock) Init(config config.Config) func(*cli.Cmd) {
 		}
 
 		var (
-			loadCf    = cmd.BoolOpt("load-cf l", false, "Выполнить загрузку конфигурации из файла, вместо обновления")
-			dbUser    = cmd.StringOpt("db-user w", "Администратор", "Пользователь информационной базы")
-			dbPwd     = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
-			ucCode    = cmd.StringOpt("uc-code uc", "", "Ключ разрешения запуска")
-			db        = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
-			updateDir = cmd.StringArg("FILE", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")
+			dbUser       = cmd.StringOpt("db-user u", "Администратор", "Пользователь информационной базы")
+			dbPwd        = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			ucCode       = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
+			clusterAdmin = cmd.StringOpt("cluster-admin", "", "Администратор кластера")
+			clusterPwd   = cmd.StringOpt("cluster-pwd", "", "Пароль администратора кластера")
+			rasRunMode   = cmd.StringOpt("ras-run r", "noRun", "Режим запуска RAS (noRun, run, stop")
+			db           = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
+			ras          = cmd.StringArg("RAS", "localhost:1545", "Сетевой адрес RAS")
 		)
+		cmd.Spec = "[OPTIONS] CONNECT [RAS]"
 
-		logUpdate := config.Log().NewContextLogger(logging.LogFeilds{
-			"command": "update",
+		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
+			"command":    "sessions",
+			"subcommand": "unlock",
 		})
 
 		// What to run when this command is called
 		cmd.Action = func() {
 			// Inside the action, and only inside, you can safely access the values of the options and arguments
 
-			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd, *ucCode)
+			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
 			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
-			Обновлятор.ФайлОбновления = *updateDir
-			Обновлятор.ВыполнитьЗагрузкуВместоОбновения = *loadCf
-			Обновлятор.УстановитьЛог(logUpdate)
-			workErr := Обновлятор.ВыполнитьОбновление()
+			Обновлятор.УстановитьЛог(logCommand)
+			Обновлятор.УстановитьКлючРазрешенияЗапуска(*ucCode)
+			workErr := errors.New("Команда не реализована") // Обновлятор.ВыполнитьОбновление()
 
 			if workErr != nil {
-				logUpdate(logging.LogFeilds{
-					"db":        *db,
-					"updateDir": *updateDir,
-					"loadCf":    *loadCf,
-					"ucCode":    *ucCode,
-					"v8":        config.V8,
-				}).WithError(workErr).Error("Ошибка выполнения команды: ")
+				logCommand(logging.LogFeilds{
+					"db":           *db,
+					"dbUser":       *dbUser,
+					"ucCode":       *ucCode,
+					"v8":           config.V8,
+					"ras":          *ras,
+					"rasRunMode":   *rasRunMode,
+					"clusterAdmin": *clusterAdmin,
+					"clusterPwd":   *clusterPwd,
+				}).WithError(workErr).Error("Ошибка выполнения команды")
 			}
+			failOnErr(workErr)
 
 		}
 		//cmd.Spec = "[-l --uc -u -p]"
@@ -110,6 +121,10 @@ func (c SessionsUnLock) Init(config config.Config) func(*cli.Cmd) {
 	return sessionsInit
 }
 
+func (_ SessionsLock) Name() string { return "lock l" }
+func (_ SessionsLock) Desc() string {
+	return "Установить блокировку соединений"
+}
 func (c SessionsLock) Init(config config.Config) func(*cli.Cmd) {
 
 	return func(cmd *cli.Cmd) {
@@ -119,25 +134,25 @@ func (c SessionsLock) Init(config config.Config) func(*cli.Cmd) {
 			cmd.Command(subCommand.Name(), subCommand.Desc(), subCommand.Init(config))
 		}
 
-		lockStart := Duration(0)
-		lockEnd := Duration(0)
+		lockStart := DateTime{time.Now().Add(5 * time.Minute)}
+		lockEnd := DateTime{lockStart.Add(1 * time.Hour)}
 		var (
-			dbUser       = cmd.StringOpt("db-user w", "Администратор", "Пользователь информационной базы")
+			dbUser       = cmd.StringOpt("db-user u", "Администратор", "Пользователь информационной базы")
 			dbPwd        = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
-			ucCode       = cmd.StringOpt("uc-code uc", "", "Ключ разрешения запуска")
-			clusterAdmin = cmd.StringArg("cluster-admin ca", "", "Администратор кластера")
-			clusterPwd   = cmd.StringArg("cluster-pwd cp", "", "Пароль администратора кластера")
+			ucCode       = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
+			clusterAdmin = cmd.StringOpt("cluster-admin", "", "Администратор кластера")
+			clusterPwd   = cmd.StringOpt("cluster-pwd", "", "Пароль администратора кластера")
 			lockMessage  = cmd.StringOpt("lock-message m", "Выполняются технические работы. Установлена блокировка сеансов.", "Ключ разрешения запуска")
-			rasRunMode   = cmd.StringArg("ras-run rr", "noRun", "Режим запуска RAS (noRun, run, stop")
-			ras          = cmd.StringArg("RAS", "localhost:1545", "Сетевой адрес RAS")
+			rasRunMode   = cmd.StringOpt("ras-run r", "noRun", "Режим запуска RAS (noRun, run, stop")
 			db           = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
+			ras          = cmd.StringArg("RAS", "localhost:1545", "Сетевой адрес RAS")
 		)
-
+		cmd.Spec = "[OPTIONS] CONNECT [RAS]"
 		cmd.VarOpt("lock-start s", &lockStart, "Время старта блокировки пользователей, время указываем как '2040-12-31T23:59:59")
-		cmd.VarOpt("lock-end s", &lockEnd, "Время старта блокировки пользователей, время указываем как '2040-12-31T23:59:59")
+		cmd.VarOpt("lock-end e", &lockEnd, "Время окончания блокировки пользователей, время указываем как '2040-12-31T23:59:59")
 
 		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
-			"command":    "session",
+			"command":    "sessions",
 			"subcommand": "lock",
 		})
 
@@ -145,10 +160,10 @@ func (c SessionsLock) Init(config config.Config) func(*cli.Cmd) {
 		cmd.Action = func() {
 			// Inside the action, and only inside, you can safely access the values of the options and arguments
 
-			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd, *ucCode)
+			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
 			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
 			Обновлятор.УстановитьЛог(logCommand)
-			workErr := Обновлятор.ВыполнитьОбновление()
+			workErr := errors.New("Команда не реализована") //Обновлятор.ВыполнитьОбновление()
 
 			if workErr != nil {
 				logCommand(logging.LogFeilds{
@@ -159,38 +174,97 @@ func (c SessionsLock) Init(config config.Config) func(*cli.Cmd) {
 					"ras":          *ras,
 					"rasRunMode":   *rasRunMode,
 					"lockMessage":  *lockMessage,
-					"lockStart":    lockStart,
-					"lockEnd":      lockEnd,
-					"clusterAdmin": clusterAdmin,
-					"clusterPwd":   clusterPwd,
-				}).WithError(workErr).Error("Ошибка выполнения команды: ")
+					"lockStart":    lockStart.Time.String(),
+					"lockEnd":      lockEnd.Time.String(),
+					"clusterAdmin": *clusterAdmin,
+					"clusterPwd":   *clusterPwd,
+				}).WithError(workErr).Error("Ошибка выполнения команды")
+			}
+			failOnErr(workErr)
+		}
+
+	}
+
+}
+
+func (_ SessionsKill) Name() string { return "kill k" }
+func (_ SessionsKill) Desc() string {
+	return "Удалить все текущие соединения"
+}
+func (_ SessionsKill) Init(config config.Config) func(*cli.Cmd) {
+
+	sessionsInit := func(cmd *cli.Cmd) {
+		// These are the command specific options and args, nicely scoped inside a func
+
+		var (
+			dbUser       = cmd.StringOpt("db-user u", "Администратор", "Пользователь информационной базы")
+			dbPwd        = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			ucCode       = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
+			clusterAdmin = cmd.StringOpt("cluster-admin", "", "Администратор кластера")
+			clusterPwd   = cmd.StringOpt("cluster-pwd", "", "Пароль администратора кластера")
+			rasRunMode   = cmd.StringOpt("ras-run r", "noRun", "Режим запуска RAS (noRun, run, stop")
+			db           = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
+			ras          = cmd.StringArg("RAS", "localhost:1545", "Сетевой адрес RAS")
+		)
+		cmd.Spec = "[OPTIONS] CONNECT [RAS]"
+
+		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
+			"command":    "sessions",
+			"subcommand": "kill",
+		})
+
+		// What to run when this command is called
+		cmd.Action = func() {
+			// Inside the action, and only inside, you can safely access the values of the options and arguments
+
+			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
+			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
+			Обновлятор.УстановитьЛог(logCommand)
+			workErr := errors.New("Команда не реализована") //Обновлятор.ВыполнитьОбновление()
+
+			if workErr != nil {
+				logCommand(logging.LogFeilds{
+					"db":           *db,
+					"dbUser":       *dbUser,
+					"ucCode":       *ucCode,
+					"v8":           config.V8,
+					"ras":          *ras,
+					"rasRunMode":   *rasRunMode,
+					"clusterAdmin": *clusterAdmin,
+					"clusterPwd":   *clusterPwd,
+				}).WithError(workErr).Error("Ошибка выполнения команды")
 			}
 
 		}
 		//cmd.Spec = "[-l --uc -u -p]"
 	}
 
+	return sessionsInit
 }
 
 // Declare your type
-type Duration time.Duration
+type DateTime struct {
+	time.Time
+}
 
 // Make it implement flag.Value
-func (d *Duration) Set(v string) error {
-	parsed, err := time.ParseDuration(v)
+func (d *DateTime) Set(v string) error {
+	parsed, err := time.Parse(time.RFC3339, v)
 	if err != nil {
 		return err
 	}
-	*d = Duration(parsed)
+	//parsed.
+	*d = DateTime{parsed}
+
+	//*d.
 	return nil
 }
 
-func (d *Duration) String() string {
-	duration := time.Duration(*d)
-	return duration.String()
+func (d *DateTime) String() string {
+	//duration := time.Duration(*d)
+	return d.Time.String()
 }
 
-func (_ SessionsLock) Name() string { return "lock l" }
-func (_ SessionsLock) Desc() string {
-	return "Установить блокировку соединений"
+func (_ *DateTime) IsDefault() bool {
+	return true
 }

@@ -15,40 +15,84 @@
 package commands
 
 import (
-	"fmt"
-
-	"github.com/spf13/cobra"
+	"github.com/jawher/mow.cli"
+	"github.com/khorevaa/go-AutoUpdate1C/config"
+	"github.com/khorevaa/go-AutoUpdate1C/logging"
+	"github.com/pkg/errors"
+	"time"
 )
 
-// updateAgentCmd represents the updateAgent command
-var updateAgentCmd = &cobra.Command{
-	Use:   "agent",
-	Short: "Режим запуска агента обновления",
-	Long: `Данный режим работает по HTTP (REST API) с базой данных.
-Возможности:
-	* самостоятельно получает список информационных баз к обновления;
-	* поддержание нескольких потоков обновления
-	* переодический/разовый опрос необходимости обновления
-	* отправка журнала обновления на url.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("updateAgent called")
-	},
+type Agent struct{}
+
+func (_ Agent) Name() string { return "agent a" }
+func (_ Agent) Desc() string { return "Запуск в режиме агента обновления" }
+
+func (c Agent) Init(config config.Config) func(*cli.Cmd) {
+
+	commandInit := func(cmd *cli.Cmd) {
+
+		cmd.LongDesc = `Данный режим работает по HTTP (REST API) с базой данных.
+		Возможности:
+		* самостоятельно получает список информационных баз к обновления;
+		* поддержание нескольких потоков обновления
+		* переодический/разовый опрос необходимости обновления
+		* отправка журнала обновления на url.`
+
+		var (
+			restUser = cmd.StringOpt("rest-user u", "", "Пользователь для подключения к серверу REST API")
+			restPwd  = cmd.StringOpt("rest-pwd p", "", "Пароль пользователя для подключения к серверу REST API")
+			threads  = cmd.IntOpt("processes c", 1, "Количество одновременно работающих процесссов")
+			server   = cmd.StringArg("SERVER", "", "Сервер с REST API для получения списка и настроек обновления информационных баз")
+		)
+
+		duration := Duration(60)
+		cmd.VarOpt("timer t", &duration, "Переодичность опроса сервера REST API в минутах (0 - отключено)")
+
+		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
+			"command": "agent",
+		})
+
+		//cmd.Spec ="[-u -p -c] ( [-r | --rewrite] ) CONNECT FILE"
+
+		// What to run when this command is called
+		cmd.Action = func() {
+			// Inside the action, and only inside, you can safely access the values of the options and arguments
+
+			workErr := errors.New("Команда не реализована") //Обновлятор.ВыполнитьОбновление()
+
+			if workErr != nil {
+				logCommand(logging.LogFeilds{
+					"server":   *server,
+					"restUser": *restUser,
+					"restPwd":  *restPwd,
+					"threads":  *threads,
+					"duration": duration,
+				}).WithError(workErr).Error("Ошибка выполнения команды: ")
+			}
+
+			failOnErr(workErr)
+
+		}
+
+	}
+
+	return commandInit
 }
 
-func init() {
-	RootCmd.AddCommand(updateAgentCmd)
+// Declare your type
+type Duration time.Duration
 
-	// Here you will define your flags and configuration settings.
+// Make it implement flag.Value
+func (d *Duration) Set(v string) error {
+	parsed, err := time.ParseDuration(v)
+	if err != nil {
+		return err
+	}
+	*d = Duration(parsed)
+	return nil
+}
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// updateAgentCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	updateAgentCmd.Flags().StringP("rest-url", "r", "", "Сервер с REST API для получения списка и настроек обновления информационных баз")
-	updateAgentCmd.Flags().StringP("rest-user", "u", "", "Пользователь для подключения к серверу REST API")
-	updateAgentCmd.Flags().StringP("rest-pwd", "p", "", "Пароль пользователя для подключения к серверу REST API")
-	updateAgentCmd.Flags().Int8P("timer", "t", 0, "Переодичность опроса сервера REST API в минутах (0 - отключено)")
-
-	updateAgentCmd.Flags().Int8P("count-threads", "d", 1, "Количество одновременно работающих процесссов (0 - отключено)")
-
+func (d *Duration) String() string {
+	duration := time.Duration(*d)
+	return duration.String()
 }

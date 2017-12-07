@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"os"
+	"github.com/jawher/mow.cli"
 )
 
 func truncStr(s string, l int) string {
@@ -17,7 +17,7 @@ func truncStr(s string, l int) string {
 
 func failOnErr(err error) {
 	if err != nil {
-		fmt.Printf("Encountered Error: %v\n", err)
-		os.Exit(2)
+		fmt.Printf("Ошибка выполненния программы: %v\n", err)
+		cli.Exit(1)
 	}
 }

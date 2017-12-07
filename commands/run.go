@@ -15,32 +15,64 @@
 package commands
 
 import (
-	"fmt"
-
-	"github.com/spf13/cobra"
+	"github.com/jawher/mow.cli"
+	"github.com/khorevaa/go-AutoUpdate1C/config"
+	"github.com/khorevaa/go-AutoUpdate1C/logging"
+	"github.com/khorevaa/go-AutoUpdate1C/update"
 )
 
-// runCmd represents the run command
-var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Запуск базы даныхх в режиме 1С.Предприятие",
-	Long: `Запуск в релиме 1С.Предприятие позволяет выполнипть
-	действия после обновления в пользовательском режиме.
-	Так же возможен запуск обработок`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("run called")
-	},
+type Run struct{}
+
+func (_ Run) Name() string { return "run r" }
+func (_ Run) Desc() string {
+	return "Запуск базы даныхх в режиме 1С.Предприятие"
 }
 
-func init() {
-	RootCmd.AddCommand(runCmd)
+func (_ Run) Init(config config.Config) func(*cli.Cmd) {
 
-	runCmd.Flags().StringP("db", "c", "", "Строка подключения к информационной базе")
-	runCmd.Flags().StringP("db-user", "u", "", "Пользователь информационной базы")
-	runCmd.Flags().StringP("db-pwd", "p", "", "Пароль пользователя информационной базы")
+	updateInit := func(cmd *cli.Cmd) {
+		// These are the command specific options and args, nicely scoped inside a func
+		var (
+			dbUser     = cmd.StringOpt("db-user u", "Администратор", "Пользователь информационной базы")
+			dbPwd      = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			ucCode     = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
+			command    = cmd.StringOpt("command", "", "Команда, при запуске")
+			privileged = cmd.BoolOpt("privileged", false, "запуск в режиме привилегированного сеанса")
+			db         = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
+			fileEpf    = cmd.StringArg("FILE", "", "Путь к файлу обработки/отчета выполняемого при запуске")
+		)
 
-	runCmd.Flags().StringP("uc-code", "", "", "Ключ разрешения запуска")
+		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
+			"command": "run",
+		})
 
-	runCmd.Flags().StringP("epf-file", "e", "", "Путь к файлу обработки (*.epf)")
+		cmd.Spec = "[OPTIONS] CONNECT [FILE]"
 
+		// What to run when this command is called
+		cmd.Action = func() {
+			// Inside the action, and only inside, you can safely access the values of the options and arguments
+
+			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
+			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
+			Обновлятор.УстановитьЛог(logCommand)
+			Обновлятор.УстановитьКлючРазрешенияЗапуска(*ucCode)
+			workErr := Обновлятор.ВыполнитьВРежимеПредприятия(*command, *fileEpf, *privileged)
+
+			if workErr != nil {
+				logCommand(logging.LogFeilds{
+					"db":         *db,
+					"fileEpf":    *fileEpf,
+					"dbUser":     *dbUser,
+					"ucCode":     *ucCode,
+					"command":    *command,
+					"privileged": *privileged,
+					"v8":         config.V8,
+				}).WithError(workErr).Error("Ошибка выполнения команды: ")
+			}
+			failOnErr(workErr)
+		}
+		//cmd.Spec = "[-l --uc -u -p]"
+	}
+
+	return updateInit
 }

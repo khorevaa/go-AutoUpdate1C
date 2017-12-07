@@ -15,10 +15,10 @@
 package commands
 
 import (
-	"github/Khorevaa/go-AutoUpdate1C/config"
-	"github/Khorevaa/go-AutoUpdate1C/update"
+	"github.com/khorevaa/go-AutoUpdate1C/config"
+	"github.com/khorevaa/go-AutoUpdate1C/update"
 
-	"github/Khorevaa/go-AutoUpdate1C/logging"
+	"github.com/khorevaa/go-AutoUpdate1C/logging"
 
 	"github.com/jawher/mow.cli"
 )
@@ -38,7 +38,7 @@ func (_ Update) Init(config config.Config) func(*cli.Cmd) {
 			loadCf    = cmd.BoolOpt("load-cf l", false, "Выполнить загрузку конфигурации из файла, вместо обновления")
 			dbUser    = cmd.StringOpt("db-user w", "Администратор", "Пользователь информационной базы")
 			dbPwd     = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
-			ucCode    = cmd.StringOpt("uc-code uc", "", "Ключ разрешения запуска")
+			ucCode    = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
 			db        = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
 			updateDir = cmd.StringArg("FILE", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")
 		)
@@ -51,22 +51,25 @@ func (_ Update) Init(config config.Config) func(*cli.Cmd) {
 		cmd.Action = func() {
 			// Inside the action, and only inside, you can safely access the values of the options and arguments
 
-			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd, *ucCode)
+			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
 			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
 			Обновлятор.ФайлОбновления = *updateDir
 			Обновлятор.ВыполнитьЗагрузкуВместоОбновения = *loadCf
 			Обновлятор.УстановитьЛог(logUpdate)
+			Обновлятор.УстановитьКлючРазрешенияЗапуска(*ucCode)
 			workErr := Обновлятор.ВыполнитьОбновление()
 
 			if workErr != nil {
 				logUpdate(logging.LogFeilds{
 					"db":        *db,
 					"updateDir": *updateDir,
-					"loadCf":    *loadCf,
+					"dbUser":    *dbUser,
 					"ucCode":    *ucCode,
+					"loadCf":    *loadCf,
 					"v8":        config.V8,
-				}).WithError(workErr).Error("Ошибка выполнения команды: ")
+				}).WithError(workErr).Error("Ошибка выполнения команды")
 			}
+			failOnErr(workErr)
 
 		}
 		//cmd.Spec = "[-l --uc -u -p]"

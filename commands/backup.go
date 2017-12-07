@@ -28,7 +28,7 @@ func (_ Backups) Desc() string {
 	return "Управление выгрузкой из информационной базы"
 }
 
-func (c Backups) Init(config config.Config) func(*cli.Cmd) {
+func (c Backups) Init(config config.ConfigFn) func(*cli.Cmd) {
 
 	sessionsInit := func(cmd *cli.Cmd) {
 
@@ -42,18 +42,18 @@ func (c Backups) Init(config config.Config) func(*cli.Cmd) {
 			backUpFile = cmd.StringArg("FILE", "", "Путь к файлу выгрузки из информационной базы")
 		)
 
-		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
-			"command": "backup",
-		})
-
-		cmd.Spec = "[-u -p -c] ( [--restore | --rewrite] ) CONNECT FILE"
+		cmd.Spec = "[OPTIONS] ( [--restore | --rewrite] ) CONNECT FILE"
 
 		// What to run when this command is called
 		cmd.Action = func() {
 			// Inside the action, and only inside, you can safely access the values of the options and arguments
 
+			logCommand := config().Log().NewContextLogger(logging.LogFeilds{
+				"command": "backup",
+			})
 			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
-			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
+			failOnErr(Обновлятор.УстановитьВерсиюПлатформы(config().V8))
+			Обновлятор.УстановитьВремяОжидания(config().TimeOut)
 			Обновлятор.УстановитьКлючРазрешенияЗапуска(*ucCode)
 			Обновлятор.УстановитьЛог(logCommand)
 
@@ -82,7 +82,7 @@ func (c Backups) Init(config config.Config) func(*cli.Cmd) {
 					"db":         *db,
 					"dbUser":     *dbUser,
 					"ucCode":     *ucCode,
-					"v8":         config.V8,
+					"v8":         config().V8,
 					"backUpFile": *backUpFile,
 					"rewrite":    *rewrite,
 					"restore":    *restore,

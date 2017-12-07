@@ -24,6 +24,7 @@ import (
 
 	"time"
 
+	"github.com/khorevaa/go-AutoUpdate1C/commands/types"
 	"github.com/pkg/errors"
 )
 
@@ -47,7 +48,7 @@ func (_ Sessions) Desc() string {
 	return "Управление сеансами в информационной базы"
 }
 
-func (c Sessions) Init(config config.Config) func(*cli.Cmd) {
+func (c Sessions) Init(config config.ConfigFn) func(*cli.Cmd) {
 
 	sessionsInit := func(cmd *cli.Cmd) {
 		// These are the command specific options and args, nicely scoped inside a func
@@ -64,7 +65,7 @@ func (c Sessions) Init(config config.Config) func(*cli.Cmd) {
 
 func (_ SessionsUnLock) Name() string { return "unlock ul" }
 func (_ SessionsUnLock) Desc() string { return "Снять блокировку соединений" }
-func (c SessionsUnLock) Init(config config.Config) func(*cli.Cmd) {
+func (c SessionsUnLock) Init(config config.ConfigFn) func(*cli.Cmd) {
 
 	sessionsInit := func(cmd *cli.Cmd) {
 		// These are the command specific options and args, nicely scoped inside a func
@@ -85,17 +86,17 @@ func (c SessionsUnLock) Init(config config.Config) func(*cli.Cmd) {
 		)
 		cmd.Spec = "[OPTIONS] CONNECT [RAS]"
 
-		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
-			"command":    "sessions",
-			"subcommand": "unlock",
-		})
-
 		// What to run when this command is called
 		cmd.Action = func() {
 			// Inside the action, and only inside, you can safely access the values of the options and arguments
 
+			logCommand := config().Log().NewContextLogger(logging.LogFeilds{
+				"command":    "sessions",
+				"subcommand": "unlock",
+			})
 			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
-			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
+			failOnErr(Обновлятор.УстановитьВерсиюПлатформы(config().V8))
+			Обновлятор.УстановитьВремяОжидания(config().TimeOut)
 			Обновлятор.УстановитьЛог(logCommand)
 			Обновлятор.УстановитьКлючРазрешенияЗапуска(*ucCode)
 			workErr := errors.New("Команда не реализована") // Обновлятор.ВыполнитьОбновление()
@@ -105,7 +106,7 @@ func (c SessionsUnLock) Init(config config.Config) func(*cli.Cmd) {
 					"db":           *db,
 					"dbUser":       *dbUser,
 					"ucCode":       *ucCode,
-					"v8":           config.V8,
+					"v8":           config().V8,
 					"ras":          *ras,
 					"rasRunMode":   *rasRunMode,
 					"clusterAdmin": *clusterAdmin,
@@ -125,7 +126,7 @@ func (_ SessionsLock) Name() string { return "lock l" }
 func (_ SessionsLock) Desc() string {
 	return "Установить блокировку соединений"
 }
-func (c SessionsLock) Init(config config.Config) func(*cli.Cmd) {
+func (c SessionsLock) Init(config config.ConfigFn) func(*cli.Cmd) {
 
 	return func(cmd *cli.Cmd) {
 		// These are the command specific options and args, nicely scoped inside a func
@@ -134,8 +135,8 @@ func (c SessionsLock) Init(config config.Config) func(*cli.Cmd) {
 			cmd.Command(subCommand.Name(), subCommand.Desc(), subCommand.Init(config))
 		}
 
-		lockStart := DateTime{time.Now().Add(5 * time.Minute)}
-		lockEnd := DateTime{lockStart.Add(1 * time.Hour)}
+		lockStart := types.DateTime{time.Now().Add(5 * time.Minute)}
+		lockEnd := types.DateTime{lockStart.Add(1 * time.Hour)}
 		var (
 			dbUser       = cmd.StringOpt("db-user u", "Администратор", "Пользователь информационной базы")
 			dbPwd        = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
@@ -151,17 +152,17 @@ func (c SessionsLock) Init(config config.Config) func(*cli.Cmd) {
 		cmd.VarOpt("lock-start s", &lockStart, "Время старта блокировки пользователей, время указываем как '2040-12-31T23:59:59")
 		cmd.VarOpt("lock-end e", &lockEnd, "Время окончания блокировки пользователей, время указываем как '2040-12-31T23:59:59")
 
-		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
-			"command":    "sessions",
-			"subcommand": "lock",
-		})
-
 		// What to run when this command is called
 		cmd.Action = func() {
 			// Inside the action, and only inside, you can safely access the values of the options and arguments
 
+			logCommand := config().Log().NewContextLogger(logging.LogFeilds{
+				"command":    "sessions",
+				"subcommand": "lock",
+			})
 			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
-			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
+			failOnErr(Обновлятор.УстановитьВерсиюПлатформы(config().V8))
+			Обновлятор.УстановитьВремяОжидания(config().TimeOut)
 			Обновлятор.УстановитьЛог(logCommand)
 			workErr := errors.New("Команда не реализована") //Обновлятор.ВыполнитьОбновление()
 
@@ -170,7 +171,7 @@ func (c SessionsLock) Init(config config.Config) func(*cli.Cmd) {
 					"db":           *db,
 					"dbUser":       *dbUser,
 					"ucCode":       *ucCode,
-					"v8":           config.V8,
+					"v8":           config().V8,
 					"ras":          *ras,
 					"rasRunMode":   *rasRunMode,
 					"lockMessage":  *lockMessage,
@@ -191,7 +192,7 @@ func (_ SessionsKill) Name() string { return "kill k" }
 func (_ SessionsKill) Desc() string {
 	return "Удалить все текущие соединения"
 }
-func (_ SessionsKill) Init(config config.Config) func(*cli.Cmd) {
+func (_ SessionsKill) Init(config config.ConfigFn) func(*cli.Cmd) {
 
 	sessionsInit := func(cmd *cli.Cmd) {
 		// These are the command specific options and args, nicely scoped inside a func
@@ -208,17 +209,17 @@ func (_ SessionsKill) Init(config config.Config) func(*cli.Cmd) {
 		)
 		cmd.Spec = "[OPTIONS] CONNECT [RAS]"
 
-		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
-			"command":    "sessions",
-			"subcommand": "kill",
-		})
-
 		// What to run when this command is called
 		cmd.Action = func() {
 			// Inside the action, and only inside, you can safely access the values of the options and arguments
 
+			logCommand := config().Log().NewContextLogger(logging.LogFeilds{
+				"command":    "sessions",
+				"subcommand": "kill",
+			})
 			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
-			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
+			failOnErr(Обновлятор.УстановитьВерсиюПлатформы(config().V8))
+			Обновлятор.УстановитьВремяОжидания(config().TimeOut)
 			Обновлятор.УстановитьЛог(logCommand)
 			workErr := errors.New("Команда не реализована") //Обновлятор.ВыполнитьОбновление()
 
@@ -227,7 +228,7 @@ func (_ SessionsKill) Init(config config.Config) func(*cli.Cmd) {
 					"db":           *db,
 					"dbUser":       *dbUser,
 					"ucCode":       *ucCode,
-					"v8":           config.V8,
+					"v8":           config().V8,
 					"ras":          *ras,
 					"rasRunMode":   *rasRunMode,
 					"clusterAdmin": *clusterAdmin,
@@ -241,31 +242,4 @@ func (_ SessionsKill) Init(config config.Config) func(*cli.Cmd) {
 	}
 
 	return sessionsInit
-}
-
-// Declare your type
-type DateTime struct {
-	time.Time
-}
-
-// Make it implement flag.Value
-func (d *DateTime) Set(v string) error {
-	parsed, err := time.Parse(time.RFC3339, v)
-	if err != nil {
-		return err
-	}
-	//parsed.
-	*d = DateTime{parsed}
-
-	//*d.
-	return nil
-}
-
-func (d *DateTime) String() string {
-	//duration := time.Duration(*d)
-	return d.Time.String()
-}
-
-func (_ *DateTime) IsDefault() bool {
-	return true
 }

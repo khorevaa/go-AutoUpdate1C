@@ -28,7 +28,7 @@ func (_ Run) Desc() string {
 	return "Запуск базы даныхх в режиме 1С.Предприятие"
 }
 
-func (_ Run) Init(config config.Config) func(*cli.Cmd) {
+func (_ Run) Init(config config.ConfigFn) func(*cli.Cmd) {
 
 	updateInit := func(cmd *cli.Cmd) {
 		// These are the command specific options and args, nicely scoped inside a func
@@ -42,18 +42,18 @@ func (_ Run) Init(config config.Config) func(*cli.Cmd) {
 			fileEpf    = cmd.StringArg("FILE", "", "Путь к файлу обработки/отчета выполняемого при запуске")
 		)
 
-		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
-			"command": "run",
-		})
-
 		cmd.Spec = "[OPTIONS] CONNECT [FILE]"
 
 		// What to run when this command is called
 		cmd.Action = func() {
 			// Inside the action, and only inside, you can safely access the values of the options and arguments
 
+			logCommand := config().Log().NewContextLogger(logging.LogFeilds{
+				"command": "run",
+			})
 			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
-			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
+			failOnErr(Обновлятор.УстановитьВерсиюПлатформы(config().V8))
+			Обновлятор.УстановитьВремяОжидания(config().TimeOut)
 			Обновлятор.УстановитьЛог(logCommand)
 			Обновлятор.УстановитьКлючРазрешенияЗапуска(*ucCode)
 			workErr := Обновлятор.ВыполнитьВРежимеПредприятия(*command, *fileEpf, *privileged)
@@ -66,7 +66,7 @@ func (_ Run) Init(config config.Config) func(*cli.Cmd) {
 					"ucCode":     *ucCode,
 					"command":    *command,
 					"privileged": *privileged,
-					"v8":         config.V8,
+					"v8":         config().V8,
 				}).WithError(workErr).Error("Ошибка выполнения команды: ")
 			}
 			failOnErr(workErr)

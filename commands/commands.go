@@ -25,5 +25,5 @@ var Commands = []Command{
 type Command interface {
 	Name() string
 	Desc() string
-	Init(config config.Config) func(*cli.Cmd)
+	Init(config config.ConfigFn) func(*cli.Cmd)
 }

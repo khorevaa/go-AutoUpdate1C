@@ -30,7 +30,7 @@ func (_ Update) Desc() string {
 	return "Обновление конфигурации информационной базы"
 }
 
-func (_ Update) Init(config config.Config) func(*cli.Cmd) {
+func (_ Update) Init(config config.ConfigFn) func(*cli.Cmd) {
 
 	updateInit := func(cmd *cli.Cmd) {
 		// These are the command specific options and args, nicely scoped inside a func
@@ -43,16 +43,17 @@ func (_ Update) Init(config config.Config) func(*cli.Cmd) {
 			updateDir = cmd.StringArg("FILE", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")
 		)
 
-		logUpdate := config.Log().NewContextLogger(logging.LogFeilds{
-			"command": "update",
-		})
-
 		// What to run when this command is called
 		cmd.Action = func() {
 			// Inside the action, and only inside, you can safely access the values of the options and arguments
 
+			logUpdate := config().Log().NewContextLogger(logging.LogFeilds{
+				"command": "update",
+			})
+
 			Обновлятор := update.НовоеОбновление(*db, *dbUser, *dbPwd)
-			Обновлятор.УстановитьВерсиюПлатформы(config.V8)
+			failOnErr(Обновлятор.УстановитьВерсиюПлатформы(config().V8))
+			Обновлятор.УстановитьВремяОжидания(config().TimeOut)
 			Обновлятор.ФайлОбновления = *updateDir
 			Обновлятор.ВыполнитьЗагрузкуВместоОбновения = *loadCf
 			Обновлятор.УстановитьЛог(logUpdate)
@@ -66,7 +67,7 @@ func (_ Update) Init(config config.Config) func(*cli.Cmd) {
 					"dbUser":    *dbUser,
 					"ucCode":    *ucCode,
 					"loadCf":    *loadCf,
-					"v8":        config.V8,
+					"v8":        config().V8,
 				}).WithError(workErr).Error("Ошибка выполнения команды")
 			}
 			failOnErr(workErr)

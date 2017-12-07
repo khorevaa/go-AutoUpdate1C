@@ -16,10 +16,10 @@ package commands
 
 import (
 	"github.com/jawher/mow.cli"
+	"github.com/khorevaa/go-AutoUpdate1C/commands/types"
 	"github.com/khorevaa/go-AutoUpdate1C/config"
 	"github.com/khorevaa/go-AutoUpdate1C/logging"
 	"github.com/pkg/errors"
-	"time"
 )
 
 type Agent struct{}
@@ -27,7 +27,7 @@ type Agent struct{}
 func (_ Agent) Name() string { return "agent a" }
 func (_ Agent) Desc() string { return "Запуск в режиме агента обновления" }
 
-func (c Agent) Init(config config.Config) func(*cli.Cmd) {
+func (c Agent) Init(config config.ConfigFn) func(*cli.Cmd) {
 
 	commandInit := func(cmd *cli.Cmd) {
 
@@ -45,10 +45,10 @@ func (c Agent) Init(config config.Config) func(*cli.Cmd) {
 			server   = cmd.StringArg("SERVER", "", "Сервер с REST API для получения списка и настроек обновления информационных баз")
 		)
 
-		duration := Duration(60)
+		duration := types.Duration(60)
 		cmd.VarOpt("timer t", &duration, "Переодичность опроса сервера REST API в минутах (0 - отключено)")
 
-		logCommand := config.Log().NewContextLogger(logging.LogFeilds{
+		logCommand := config().Log().NewContextLogger(logging.LogFeilds{
 			"command": "agent",
 		})
 
@@ -77,22 +77,4 @@ func (c Agent) Init(config config.Config) func(*cli.Cmd) {
 	}
 
 	return commandInit
-}
-
-// Declare your type
-type Duration time.Duration
-
-// Make it implement flag.Value
-func (d *Duration) Set(v string) error {
-	parsed, err := time.ParseDuration(v)
-	if err != nil {
-		return err
-	}
-	*d = Duration(parsed)
-	return nil
-}
-
-func (d *Duration) String() string {
-	duration := time.Duration(*d)
-	return duration.String()
 }

@@ -39,8 +39,8 @@ func (c Agent) Init(config config.ConfigFn) func(*cli.Cmd) {
 		* отправка журнала обновления на url.`
 
 		var (
-			restUser = cmd.StringOpt("rest-user u", "", "Пользователь для подключения к серверу REST API")
-			restPwd  = cmd.StringOpt("rest-pwd p", "", "Пароль пользователя для подключения к серверу REST API")
+			restUser = cmd.StringOpt("rest-user u", "", "user для подключения к серверу REST API")
+			restPwd  = cmd.StringOpt("rest-pwd p", "", "Password пользователя для подключения к серверу REST API")
 			threads  = cmd.IntOpt("processes c", 1, "Количество одновременно работающих процесссов")
 			server   = cmd.StringArg("SERVER", "", "Сервер с REST API для получения списка и настроек обновления информационных баз")
 		)

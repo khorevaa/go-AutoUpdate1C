@@ -18,10 +18,15 @@ import (
 	"flag"
 	"fmt"
 	"github.com/jawher/mow.cli"
+	//"go-AutoUpdate1C/commands"
+	//"go-AutoUpdate1C/commands/types"
+	//"go-AutoUpdate1C/config"
+	"os"
+
 	"github.com/khorevaa/go-AutoUpdate1C/commands"
 	"github.com/khorevaa/go-AutoUpdate1C/commands/types"
 	"github.com/khorevaa/go-AutoUpdate1C/config"
-	"os"
+	//"os"
 	"time"
 )
 

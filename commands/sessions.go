@@ -75,11 +75,11 @@ func (c SessionsUnLock) Init(config config.ConfigFn) func(*cli.Cmd) {
 		}
 
 		var (
-			dbUser       = cmd.StringOpt("db-user u", "Администратор", "Пользователь информационной базы")
-			dbPwd        = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			dbUser       = cmd.StringOpt("db-user u", "Администратор", "user информационной базы")
+			dbPwd        = cmd.StringOpt("db-pwd p", "", "Password пользователя информационной базы")
 			ucCode       = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
 			clusterAdmin = cmd.StringOpt("cluster-admin", "", "Администратор кластера")
-			clusterPwd   = cmd.StringOpt("cluster-pwd", "", "Пароль администратора кластера")
+			clusterPwd   = cmd.StringOpt("cluster-pwd", "", "Password администратора кластера")
 			rasRunMode   = cmd.StringOpt("ras-run r", "noRun", "Режим запуска RAS (noRun, run, stop")
 			db           = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
 			ras          = cmd.StringArg("RAS", "localhost:1545", "Сетевой адрес RAS")
@@ -138,11 +138,11 @@ func (c SessionsLock) Init(config config.ConfigFn) func(*cli.Cmd) {
 		lockStart := types.DateTime{time.Now().Add(5 * time.Minute)}
 		lockEnd := types.DateTime{lockStart.Add(1 * time.Hour)}
 		var (
-			dbUser       = cmd.StringOpt("db-user u", "Администратор", "Пользователь информационной базы")
-			dbPwd        = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			dbUser       = cmd.StringOpt("db-user u", "Администратор", "user информационной базы")
+			dbPwd        = cmd.StringOpt("db-pwd p", "", "Password пользователя информационной базы")
 			ucCode       = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
 			clusterAdmin = cmd.StringOpt("cluster-admin", "", "Администратор кластера")
-			clusterPwd   = cmd.StringOpt("cluster-pwd", "", "Пароль администратора кластера")
+			clusterPwd   = cmd.StringOpt("cluster-pwd", "", "Password администратора кластера")
 			lockMessage  = cmd.StringOpt("lock-message m", "Выполняются технические работы. Установлена блокировка сеансов.", "Ключ разрешения запуска")
 			rasRunMode   = cmd.StringOpt("ras-run r", "noRun", "Режим запуска RAS (noRun, run, stop")
 			db           = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
@@ -198,11 +198,11 @@ func (_ SessionsKill) Init(config config.ConfigFn) func(*cli.Cmd) {
 		// These are the command specific options and args, nicely scoped inside a func
 
 		var (
-			dbUser       = cmd.StringOpt("db-user u", "Администратор", "Пользователь информационной базы")
-			dbPwd        = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			dbUser       = cmd.StringOpt("db-user u", "Администратор", "user информационной базы")
+			dbPwd        = cmd.StringOpt("db-pwd p", "", "Password пользователя информационной базы")
 			ucCode       = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
 			clusterAdmin = cmd.StringOpt("cluster-admin", "", "Администратор кластера")
-			clusterPwd   = cmd.StringOpt("cluster-pwd", "", "Пароль администратора кластера")
+			clusterPwd   = cmd.StringOpt("cluster-pwd", "", "Password администратора кластера")
 			rasRunMode   = cmd.StringOpt("ras-run r", "noRun", "Режим запуска RAS (noRun, run, stop")
 			db           = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
 			ras          = cmd.StringArg("RAS", "localhost:1545", "Сетевой адрес RAS")

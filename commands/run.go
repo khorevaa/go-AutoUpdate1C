@@ -33,8 +33,8 @@ func (_ Run) Init(config config.ConfigFn) func(*cli.Cmd) {
 	updateInit := func(cmd *cli.Cmd) {
 		// These are the command specific options and args, nicely scoped inside a func
 		var (
-			dbUser     = cmd.StringOpt("db-user u", "Администратор", "Пользователь информационной базы")
-			dbPwd      = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			dbUser     = cmd.StringOpt("db-user u", "Администратор", "user информационной базы")
+			dbPwd      = cmd.StringOpt("db-pwd p", "", "Password пользователя информационной базы")
 			ucCode     = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
 			command    = cmd.StringOpt("command", "", "Команда, при запуске")
 			privileged = cmd.BoolOpt("privileged", false, "запуск в режиме привилегированного сеанса")

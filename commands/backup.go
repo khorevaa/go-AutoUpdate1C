@@ -33,8 +33,8 @@ func (c Backups) Init(config config.ConfigFn) func(*cli.Cmd) {
 	sessionsInit := func(cmd *cli.Cmd) {
 
 		var (
-			dbUser     = cmd.StringOpt("db-user u", "Администратор", "Пользователь информационной базы")
-			dbPwd      = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			dbUser     = cmd.StringOpt("db-user u", "Администратор", "user информационной базы")
+			dbPwd      = cmd.StringOpt("db-pwd p", "", "Password пользователя информационной базы")
 			ucCode     = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
 			rewrite    = cmd.BoolOpt("rewrite", false, "Перезаписть существующий файл бекапа")
 			restore    = cmd.BoolOpt("restore r", false, "Вссстановить информационной базы из выгрузки")

@@ -36,8 +36,8 @@ func (_ Update) Init(config config.ConfigFn) func(*cli.Cmd) {
 		// These are the command specific options and args, nicely scoped inside a func
 		var (
 			loadCf    = cmd.BoolOpt("load-cf l", false, "Выполнить загрузку конфигурации из файла, вместо обновления")
-			dbUser    = cmd.StringOpt("db-user w", "Администратор", "Пользователь информационной базы")
-			dbPwd     = cmd.StringOpt("db-pwd p", "", "Пароль пользователя информационной базы")
+			dbUser    = cmd.StringOpt("db-user w", "Администратор", "user информационной базы")
+			dbPwd     = cmd.StringOpt("db-pwd p", "", "Password пользователя информационной базы")
 			ucCode    = cmd.StringOpt("uc-code c", "", "Ключ разрешения запуска")
 			db        = cmd.StringArg("CONNECT", "", "Строка подключения к информационной базе")
 			updateDir = cmd.StringArg("FILE", "", "Путь к файлу обновления (папка или указание на *.cf, *.cfu)")

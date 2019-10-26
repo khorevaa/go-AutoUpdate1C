@@ -27,7 +27,7 @@ func detectFileCharset(data []byte) charset {
 		case data[0] == 0xFE && data[1] == 0xFF:
 			return utf16Le
 		case data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF:
-			// wanna check special ascii codings here?
+			// wanna Check special ascii codings here?
 			return utf8withBOM
 		}
 	}

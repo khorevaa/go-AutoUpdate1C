@@ -1,8 +1,6 @@
 package v8run
 
 type Enterprise struct {
-	baseRunner
-	infobase               infobase
 	unlockCode             string
 	startParams            string
 	execute                string

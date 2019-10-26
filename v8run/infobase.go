@@ -24,13 +24,21 @@ func (c credentials) authString() string {
 
 }
 
-type infobase struct {
+type Infobase struct {
 	cs   connectString
 	auth credentials
 	zn   []string
 }
 
-func (ib infobase) connectString() string {
+func (ib *Infobase) Args() []string {
+
+	var args []string
+	args = append(args, ib.cs.connectString())
+	args = append(args, ib.auth.authString())
+	return args
+}
+
+func (ib *Infobase) ConnectString() string {
 	return fmt.Sprintf("%s %s", ib.cs.connectString(), ib.auth.authString())
 }
 

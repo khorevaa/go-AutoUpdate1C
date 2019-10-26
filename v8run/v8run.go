@@ -1,18 +1,11 @@
 package v8run
 
 import (
-	"bytes"
-	"fmt"
-	"golang.org/x/text/encoding/charmap"
-	"golang.org/x/text/encoding/unicode"
-	"golang.org/x/text/transform"
-	"io/ioutil"
 	"os/exec"
 	"strconv"
 	"syscall"
 
 	"context"
-	"github.com/khorevaa/go-v8runner/v8platform"
 	"github.com/khorevaa/go-v8runner/v8tools"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -20,68 +13,11 @@ import (
 	"time"
 )
 
-type ЗапускательИнтерфейс interface {
-	ВыполнитьКомандуКонфигуратора() (err error)
-	ВыполнитьКомандуСоздатьБазу() (err error)
-	ВыполнитьКомандуПредприятие() (err error)
-	ВыполнитьКоманду() (err error)
-
-	УстановитьВерсиюПлатформы(строкаВерсияПлатформы string)
-	КлючСоединенияСБазой() string
-	УстановитьКлючСоединенияСБазой(КлючСоединенияСБазой string)
-	УстановитьАвторизацию(Пользователь string, Пароль string)
-	УстановитьПараметры(Параметры ...string)
-	ДобавитьПараметры(Параметры ...string)
-	ПолучитьВыводКоманды() (s string)
-	ПроверитьВозможностьВыполнения() (err error)
-}
-
-type runeble interface {
-	command() string
-	args() []string
-	check() bool
-	setTimeout(timeout time.Duration)
-	setVersion(version string)
-	setOut(file string)
-	setDumpResult(file string)
-	setExecutePath(file string)
-}
-
-//noinspection NonAsciiCharacters
-type baseRunner struct {
-	version    string
-	command    string
-	timeout    time.Duration
-	out        string
-	dumpResult string
-	v8path     string
-}
-
-func (r baseRunner) setTimeout(timeout time.Duration) {
-	r.timeout = timeout
-}
-
-func (r baseRunner) setVersion(version string) {
-	r.version = version
-}
-
-func (r baseRunner) setExecutePath(file string) {
-	r.v8path = file
-}
-
-func (r baseRunner) setOut(file string) {
-	r.out = file
-}
-func (r baseRunner) setDumpResult(file string) {
-	r.dumpResult = file
-}
-
-type Option func(*baseRunner)
 
 const (
-	commandDesigner       = "DESIGNER"
-	commandCreateInfobase = "CREATEINFOBASE"
-	commandEnterprise     = "ENTERPRISE"
+	COMMANE_DESIGNER       = "DESIGNER"
+	COMMAND_CREATEINFOBASE = "CREATEINFOBASE"
+	COMMAND_ENTERPRISE     = "ENTERPRISE"
 )
 
 const (
@@ -95,62 +31,30 @@ var ERROR_CHECK_RUNNING = errors.New("error checking runeble")
 var ERROR_VERSION_NOT_FOUND = errors.New("error Version is not found")
 var ERROR_RUNNING_TIMEOUT = errors.New("error running Timeout executed")
 
-var ERROR_RUNNING_FAIL = errors.New("error running v8 fail")
+var ERROR_RUNNING_FAILED = errors.New("error running v8 fail")
 var ERROR_RUNNING_DATABASE_ERROR = errors.New("error running v8 database error")
 
-func (conf *baseRunner) собратьПараметрыЗапуска() {
+type Option func(options *RunOptions)
 
-	//conf.args
-	conf.args = []string{}
-
-	conf.args = append(conf.args, string(conf.command))
-
-	if conf.command == КомандаСоздатьБазу {
-		// TODO Сделать замену /F на File= или /S на Server=
-		log.Debugf("Выполняю замену </F> и </S> в строке <%s> на параметры для создания базы. ", conf.КлючСоединенияСБазой())
-		conf.args = append(conf.args, strings.Replace(conf.КлючСоединенияСБазой(), "/F", "File=", 1))
-	} else {
-		conf.args = append(conf.args, conf.КлючСоединенияСБазой())
-	}
-
-	conf.добавитьАвторизацию()
-	conf.добавитьКлючРазрешенияЗапуска()
-
-	conf.args = append(conf.args, "/DisableStartupMessages")
-	conf.args = append(conf.args, "/DisableStartupDialogs")
-
-	conf.args = append(conf.args, "/AppAutoCheckVersion-")
-
-	conf.args = append(conf.args, conf.пользовательскиеПараметрыЗапуска...)
-
-	conf.добавитьВыводВФайл()
-
-}
-
-type RunebleOption func(options *RunOptions)
-
-// private run func
-const defaultFailedCode = 1
-
-func WithTimeout(timeout time.Duration) RunebleOption {
+func WithTimeout(timeout time.Duration) Option {
 	return func(r *RunOptions) {
 		r.Timeout = timeout
 	}
 }
 
-func WithOut(file string) RunebleOption {
+func WithOut(file string) Option {
 	return func(r *RunOptions) {
 		r.Out = file
 	}
 }
 
-func WithDumpResult(file string) RunebleOption {
+func WithDumpResult(file string) Option {
 	return func(r *RunOptions) {
 		r.DumpResult = file
 	}
 }
 
-func WithVersion(version string) RunebleOption {
+func WithVersion(version string) Option {
 	return func(r *RunOptions) {
 		r.Version = version
 	}
@@ -184,25 +88,28 @@ func readDumpResult(file string) int {
 	return int(code)
 }
 
-func RunWithOptions(runner runeble, options *RunOptions) (int, error) {
+func RunWithOptions(where Where, what Command,, options *RunOptions) (int, error) {
 
 	var exitCode int
 
-	if runner.check() {
-		return defaultFailedCode, ERROR_CHECK_RUNNING
+	if what.Check() {
+		return EXITCODE_FAIL, ERROR_CHECK_RUNNING
 	}
 
 	commandV8, err := getV8Path(options)
 
 	if err != nil {
-		return defaultFailedCode, err
+		return EXITCODE_FAIL, err
 	}
 
 	// Create a new context and add a Timeout to it
 	ctx, cancel := context.WithTimeout(context.Background(), options.Timeout)
 	defer cancel() // The cancel should be deferred so resources are cleaned up
 
-	args := runner.args()
+	var args []string
+	args = append(args, what.Command())
+	args = append(append(args, where.Args()...), what.Args()...)
+
 	cmd := exec.CommandContext(ctx, commandV8, args...)
 
 	out, runErr := cmd.Output()
@@ -218,7 +125,7 @@ func RunWithOptions(runner runeble, options *RunOptions) (int, error) {
 			// empty string very likely, so we use the default fail code, and format err
 			// to string and set to stderr
 			log.Debugf("Could not get exit code for failed program: %v, %v", commandV8, args)
-			exitCode = defaultFailedCode
+			exitCode = EXITCODE_FAIL
 		}
 	} else {
 
@@ -228,11 +135,11 @@ func RunWithOptions(runner runeble, options *RunOptions) (int, error) {
 
 	}
 
-	// We want to check the context error to see if the Timeout was executed.
+	// We want to Check the context error to see if the Timeout was executed.
 	// The error returned by cmd.Output() will be OS specific based on what
 	// happens when a process is killed.
 	if ctx.Err() == context.DeadlineExceeded {
-		return defaultFailedCode, ERROR_RUNNING_TIMEOUT
+		return EXITCODE_FAIL, ERROR_RUNNING_TIMEOUT
 	}
 
 	dumpCode := readDumpResult(options.DumpResult)
@@ -245,7 +152,7 @@ func RunWithOptions(runner runeble, options *RunOptions) (int, error) {
 
 	case EXITCODE_FAIL:
 
-		return EXITCODE_FAIL, ERROR_RUNNING_FAIL
+		return EXITCODE_FAIL, ERROR_RUNNING_FAILED
 
 	case EXITCODE_DATABASE_ERROR:
 
@@ -253,55 +160,44 @@ func RunWithOptions(runner runeble, options *RunOptions) (int, error) {
 
 	default:
 
-		return defaultFailedCode, errors.New("unknown error")
+		return EXITCODE_FAIL, errors.New("unknown error")
 	}
 }
 
 func defaultOptions(command string) *RunOptions {
 
 	var options RunOptions
+	options.Timeout = time.Duration(120)
 
 	switch command {
 
-	case commandDesigner:
-	case commandEnterprise:
-	case commandCreateInfobase:
+	case COMMANE_DESIGNER:
+	case COMMAND_ENTERPRISE:
+	case COMMAND_CREATEINFOBASE:
 	}
 
 	return &options
 }
 
-func Run(runner runeble, opts ...RunebleOption) (runErr error) {
+type Where interface {
+	Args() []string
+}
 
-	options := defaultOptions(runner.command())
+type Command interface {
+	Command() string
+	Args() []string
+	Check() bool
+}
+
+func Run(where Where, what Command, opts ...Option) (int, error) {
+
+	options := defaultOptions(what.Command())
 
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	return RunWithOptions(runner, options)
+	return RunWithOptions(where, what, options)
 
 }
 
-func (c *baseRunner) прочитатьФайлИнформации() (str string) {
-
-	log.Debugf("Читаю файла информации 1С: %s", c.out)
-
-	b, err := v8tools.ПрочитатьФайл1С(c.out) // just pass the file name
-	if err != nil {
-		log.Debugf("Обшибка чтения файла информации 1С %s: %v", c.out, err)
-		str = ""
-		return
-		//fmt.Print(err)
-	}
-
-	str = string(b) // convert content to a 'string'
-
-	return
-}
-
-func init() {
-
-	//log.SetLevel(log.DebugLevel)
-
-}

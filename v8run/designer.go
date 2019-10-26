@@ -2,8 +2,6 @@ package v8run
 
 import "fmt"
 
-type DesignerOptions func(designer Designer)
-
 type UserOption func(Optioned)
 
 type Optioned interface {
@@ -17,14 +15,24 @@ type CanUpdateDBCfg interface {
 type UserOptions map[string]interface{}
 
 func (uo UserOptions) setOption(key string, value interface{}) {
-	uo[key] = value
+
+	_, ok := uo[key]
+	if !ok {
+		uo[key] = value
+	}
 }
 
 func (uo UserOptions) Append(uo2 UserOptions) {
 
 	for k, v := range uo2 {
-		uo[k] = k
+		uo.setOption(k, v)
 	}
+
+}
+
+func (uo UserOptions) Option(fn UserOption) {
+
+	fn(uo)
 
 }
 
@@ -49,13 +57,11 @@ func (d Designer) Values() (values UserOptions) {
 
 	values = make(map[string]interface{})
 
-	values["/DisableStartupDialogs"] = d.disableStartupDialogs
-	values["/DisableStartupDialogs"] = d.disableStartupDialogs
-	values["/Visible"] = d.visible
+	values.Append(d.UserOptions)
 
-	for k, v := range d.UserOptions {
-		values[k] = v
-	}
+	values.setOption("/DisableStartupDialogs", d.disableStartupDialogs)
+	values.setOption("/DisableStartupDialogs", d.disableStartupDialogs)
+	values.setOption("/Visible", d.visible)
 
 	return values
 
@@ -96,25 +102,14 @@ func processArgs(options UserOptions) (args []string) {
 	return
 }
 
-func (d Designer) option(in interface{}) {
-
-	opt, ok := in.(DesignerOptions)
-
-	if !ok {
-		return
-	}
-
-	d.Option(opt)
-}
-
-func NewDesigner(opts ...DesignerOptions) Designer {
+func NewDesigner(opts ...UserOption) Designer {
 
 	d := Designer{
 		UserOptions: make(map[string]interface{}),
 	}
 
 	for _, opt := range opts {
-		d.option(opt)
+		d.Option(opt)
 	}
 
 	return d
@@ -135,10 +130,6 @@ func newDefaultDesigner() Designer {
 	}
 
 	return d
-}
-
-func (d Designer) Option(option DesignerOptions) {
-	option(d)
 }
 
 func WithUpdateDBCfg(update UpdateDBCfgOptions) func(CanUpdateDBCfg) {
@@ -169,29 +160,9 @@ func (d LoadCfgOptions) Values() (values UserOptions) {
 
 }
 
-func (d LoadCfgOptions) option(in interface{}) {
-
-	switch in.(type) {
-
-	case LoadCfgOption:
-		opt, _ := in.(LoadCfgOption)
-		d.Option(opt)
-	case DesignerOptions:
-		d.Designer.option(in)
-	}
-}
-
-func (d LoadCfgOptions) Option(fn LoadCfgOption) {
-
-	fn(d)
-
-}
-
 func (d LoadCfgOptions) SetUpdateDBCfg(updateDBCfg UpdateDBCfgOptions) {
 	d.UpdateDBCfg = updateDBCfg
 }
-
-type DumpCfgOption func(DumpCfgOptions)
 
 type DumpCfgOptions struct {
 	Designer
@@ -199,40 +170,15 @@ type DumpCfgOptions struct {
 	Extension string
 }
 
-func (d DumpCfgOptions) Args() (args []string) {
+func (d DumpCfgOptions) Values() (values UserOptions) {
 
-	args = d.Designer.Args()
-
-	args = append(args, fmt.Sprintf("/DumpCfg %s ", d.File))
-
-	if len(d.Extension) > 0 {
-		args = append(args, fmt.Sprintf("-Extension %s", d.Extension))
-
-	}
+	values = d.Designer.Values()
+	values.setOption("/DumpCfg", d.File)
+	values.setOption("-Extension", d.Extension)
 
 	return
 
 }
-
-func (d DumpCfgOptions) Option(fn DumpCfgOption) {
-
-	fn(d)
-
-}
-
-func (d DumpCfgOptions) option(in interface{}) {
-
-	switch in.(type) {
-
-	case DumpCfgOption:
-		opt, _ := in.(DumpCfgOption)
-		d.Option(opt)
-	case DesignerOptions:
-		d.Designer.option(in)
-	}
-}
-
-type UpdateCfgOption func(UpdateCfgOptions)
 
 type UpdateCfgOptions struct {
 	Designer
@@ -263,45 +209,21 @@ type UpdateCfgOptions struct {
 	UpdateDBCfg UpdateDBCfgOptions
 }
 
-func (d UpdateCfgOptions) Args() (args []string) {
+func (d UpdateCfgOptions) Values() (values UserOptions) {
 
-	args = d.Designer.Args()
+	values = d.Designer.Values()
+	values.setOption("/UpdateCfg", d.File)
+	values.setOption("-Force", d.Force)
+	values.setOption("-Settings", d.Settings)
 
-	args = append(args, fmt.Sprintf("/UpdateCfg %s ", d.File))
-
-	if d.Force {
-		args = append(args, "-Force")
-	}
-
-	if len(d.Settings) > 0 {
-		args = append(args, fmt.Sprintf("-Settings %s", d.Settings))
-
-	}
+	values.Append(d.UpdateDBCfg.Values())
 
 	return
 
 }
 
-func (d UpdateCfgOptions) Option(fn UpdateCfgOption) {
-
-	fn(d)
-
-}
-
-func (d UpdateCfgOptions) SetUpdateDBCfg(updateDBCfg *UpdateDBCfgOptions) {
+func (d UpdateCfgOptions) SetUpdateDBCfg(updateDBCfg UpdateDBCfgOptions) {
 	d.UpdateDBCfg = updateDBCfg
-}
-
-func (d UpdateCfgOptions) option(in interface{}) {
-
-	switch in.(type) {
-
-	case UpdateCfgOption:
-		opt, _ := in.(UpdateCfgOption)
-		d.Option(opt)
-	case DesignerOptions:
-		d.Designer.option(in)
-	}
 }
 
 type UpdateDBCfgOption func(UpdateDBCfgOptions)
@@ -311,6 +233,8 @@ type UpdateDBCfgOption func(UpdateDBCfgOptions)
 //[-WarningsAsErrors] [-Server [-v1|-v2]][-Extension <имя расширения>]
 type UpdateDBCfgOptions struct {
 	Designer
+
+	Use bool
 
 	//-Dynamic<Режим> — признак использования динамического обновления. Режим может принимать следующие значения
 	//-Dynamic+ — Значение параметра по умолчанию.
@@ -368,72 +292,16 @@ type UpdateDBCfgOptions struct {
 	Extension string
 }
 
-func (d UpdateDBCfgOptions) Args() (args []string) {
+func (d UpdateDBCfgOptions) Values() (values UserOptions) {
 
-	args = d.Designer.Args()
+	values = d.Designer.Values()
 
-	args = append(args, "/UpdateDBCfg")
-
-	if d.Server {
-		args = append(args, "-Server")
+	if d.Use {
+		values.setOption("/UpdateDBCfg", true)
+		values.setOption("-Server", d.Server)
+		values.setOption("-WarningsAsErrors", d.WarningsAsErrors)
+		values.setOption("-Extension", d.Extension)
 	}
-
-	if d.WarningsAsErrors {
-		args = append(args, "-WarningsAsErrors")
-	}
-
-	if len(d.Extension) > 0 {
-		args = append(args, fmt.Sprintf("-Extension %s", d.Extension))
-
-	}
-
 	return
-
-}
-
-func (d UpdateDBCfgOptions) UpdateArgs() (args []string) {
-
-	args = append(args, "/UpdateDBCfg")
-
-	if d.Server {
-		args = append(args, "-Server")
-	}
-
-	if d.WarningsAsErrors {
-		args = append(args, "-WarningsAsErrors")
-	}
-
-	if len(d.Extension) > 0 {
-		args = append(args, fmt.Sprintf("-Extension %s", d.Extension))
-
-	}
-
-	return
-
-}
-
-func (d UpdateDBCfgOptions) Option(fn UpdateDBCfgOption) {
-
-	fn(d)
-
-}
-
-func (d UpdateDBCfgOptions) option(in interface{}) {
-
-	switch in.(type) {
-
-	case UpdateDBCfgOption:
-		opt, _ := in.(UpdateDBCfgOption)
-		d.Option(opt)
-	case DesignerOptions:
-		d.Designer.option(in)
-	}
-}
-
-func processOptions(what Optioned, opts []interface{}) {
-
-	for _, opt := range opts {
-		what.option(opt)
-	}
 
 }

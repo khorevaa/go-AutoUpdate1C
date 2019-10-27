@@ -13,11 +13,11 @@ import (
 	"time"
 )
 
-
 const (
-	COMMANE_DESIGNER       = "DESIGNER"
-	COMMAND_CREATEINFOBASE = "CREATEINFOBASE"
-	COMMAND_ENTERPRISE     = "ENTERPRISE"
+	COMMANE_DESIGNER             = "DESIGNER"
+	COMMAND_CREATEINFOBASE       = "CREATEINFOBASE"
+	COMMAND_ENTERPRISE           = "ENTERPRISE"
+	DEFAULT_1SSERVER_PORT  int16 = 1541
 )
 
 const (
@@ -88,7 +88,7 @@ func readDumpResult(file string) int {
 	return int(code)
 }
 
-func RunWithOptions(where Where, what Command,, options *RunOptions) (int, error) {
+func RunWithOptions(where Where, what Command, options *RunOptions) (int, error) {
 
 	var exitCode int
 
@@ -108,7 +108,8 @@ func RunWithOptions(where Where, what Command,, options *RunOptions) (int, error
 
 	var args []string
 	args = append(args, what.Command())
-	args = append(append(args, where.Args()...), what.Args()...)
+	args = append(args, where.ConnectString())
+	args = append(append(args, what.Args()...))
 
 	cmd := exec.CommandContext(ctx, commandV8, args...)
 
@@ -180,7 +181,7 @@ func defaultOptions(command string) *RunOptions {
 }
 
 type Where interface {
-	Args() []string
+	ConnectString() string
 }
 
 type Command interface {
@@ -200,4 +201,3 @@ func Run(where Where, what Command, opts ...Option) (int, error) {
 	return RunWithOptions(where, what, options)
 
 }
-

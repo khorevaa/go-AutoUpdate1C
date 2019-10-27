@@ -138,9 +138,6 @@ func WithUpdateDBCfg(update UpdateDBCfgOptions) func(CanUpdateDBCfg) {
 	}
 }
 
-// loadcf
-type LoadCfgOption func(LoadCfgOptions)
-
 type LoadCfgOptions struct {
 	Designer
 	File        string
@@ -304,4 +301,37 @@ func (d UpdateDBCfgOptions) Values() (values UserOptions) {
 	}
 	return
 
+}
+
+// /DumpIB <имя файла>
+//— выгрузка информационной базы в командном режиме.
+type DumpIBOptions struct {
+	Designer
+
+	File string
+}
+
+func (d DumpIBOptions) Values() (values UserOptions) {
+
+	values = d.Designer.Values()
+	values.setOption("/DumpIB", d.File)
+
+	return
+}
+
+// /RestoreIB <имя файла>
+// — загрузка информационной базы в командном режиме.
+// Если файл информационной базы отсутствует в указанном каталоге, будет создана новая информационная база.
+type RestoreIBOptions struct {
+	Designer
+
+	File string
+}
+
+func (d RestoreIBOptions) Values() (values UserOptions) {
+
+	values = d.Designer.Values()
+	values.setOption("/RestoreIB", d.File)
+
+	return
 }

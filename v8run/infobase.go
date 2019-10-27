@@ -2,7 +2,9 @@ package v8run
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
+	"strings"
 )
 
 type credentials struct {
@@ -25,21 +27,58 @@ func (c credentials) authString() string {
 }
 
 type Infobase struct {
-	cs   connectString
-	auth credentials
-	zn   []string
+	UserOptions
+	Path connectString
+	Auth credentials
+	ZN   []string
+	UC   string
 }
 
-func (ib *Infobase) Args() []string {
+func NewInfobase(path connectString, opts ...UserOption) Infobase {
 
-	var args []string
-	args = append(args, ib.cs.connectString())
-	args = append(args, ib.auth.authString())
-	return args
+	ib := Infobase{
+		Path: path,
+	}
+
+	return ib
+}
+
+func NewFileInfobase(path string, opts ...UserOption) Infobase {
+
+	ib := NewInfobase(fileConnectString(path), opts...)
+
+	return ib
+}
+
+func NewServerInfobase(server, base string, opts ...UserOption) Infobase {
+
+	serverUrl, _ := url.Parse(server)
+	port64, _ := strconv.ParseInt(serverUrl.Port(), 64, 10)
+	port := int16(port64)
+
+	if port == 0 {
+		port = DEFAULT_1SSERVER_PORT
+	}
+
+	path := serverConnectString{
+		Base:     base,
+		Host:     serverUrl.Hostname(),
+		Port:     port,
+		Protocol: serverUrl.Scheme,
+	}
+
+	ib := NewInfobase(path, opts...)
+
+	return ib
+}
+
+func (ib *Infobase) userOptionsString() string {
+
+	return strings.Join(processArgs(ib.UserOptions), " ")
 }
 
 func (ib *Infobase) ConnectString() string {
-	return fmt.Sprintf("%s %s", ib.cs.connectString(), ib.auth.authString())
+	return fmt.Sprintf("%s %s", ib.Path.connectString(), ib.Auth.authString())
 }
 
 type serverConnectString struct {

@@ -17,6 +17,14 @@ const (
 	other
 )
 
+func processOptions(cmd Optioned, opts []UserOption) {
+
+	for _, v := range opts {
+		v(cmd)
+	}
+
+}
+
 func detectFileCharset(data []byte) charset {
 
 	// Проверка на BOM

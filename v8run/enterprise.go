@@ -1,44 +1,40 @@
 package v8run
 
+import "github.com/khorevaa/go-AutoUpdate1C/v8run/types"
+
 type Enterprise struct {
-	UserOptions
+	types.UserOptions
 
 	disableSplash          bool
 	disableStartupDialogs  bool
 	disableStartupMessages bool
 }
 
-func (d Enterprise) Values() (values UserOptions) {
+func (d *Enterprise) Values() (values types.UserOptions) {
 
 	values = make(map[string]interface{})
 
 	values.Append(d.UserOptions)
 
-	values.setOption("/DisableStartupDialogs", d.disableStartupDialogs)
-	values.setOption("/DisableStartupDialogs", d.disableStartupDialogs)
+	values.SetOption("/DisableStartupDialogs", d.disableStartupDialogs)
+	values.SetOption("/DisableStartupDialogs", d.disableStartupDialogs)
 
 	return values
 
 }
 
-func (d Enterprise) Command() string {
+func (d *Enterprise) Command() string {
 	return COMMAND_ENTERPRISE
 }
 
-func (d Enterprise) Check() bool {
+func (d *Enterprise) Check() bool {
 
 	return true
 }
 
-func WithStartParams(params string) UserOption {
-	return func(o Optioned) {
-		o.setOption("/C", params)
-	}
-}
+func NewEnterprise(opts ...types.UserOption) *Enterprise {
 
-func NewEnterprise(opts ...UserOption) Enterprise {
-
-	d := Enterprise{
+	d := &Enterprise{
 		UserOptions: make(map[string]interface{}),
 	}
 
@@ -49,9 +45,9 @@ func NewEnterprise(opts ...UserOption) Enterprise {
 	return d
 }
 
-func newDefaultEnterprise() Enterprise {
+func newDefaultEnterprise() *Enterprise {
 
-	d := Enterprise{
+	d := &Enterprise{
 		disableStartupDialogs:  true,
 		disableStartupMessages: true,
 		disableSplash:          true,
@@ -60,16 +56,16 @@ func newDefaultEnterprise() Enterprise {
 	return d
 }
 
-///Execute <имя файла внешней обработки>
-//— предназначен для запуска внешней обработки в режиме "1С:Предприятие"
+// /Execute <имя файла внешней обработки>
+// предназначен для запуска внешней обработки в режиме "1С:Предприятие"
 // непосредственно после старта системы.
 //
 type ExecuteOptions struct {
-	Enterprise
+	*Enterprise
 	File string
 }
 
-func (d ExecuteOptions) Values() (values UserOptions) {
+func (d ExecuteOptions) Values() (values types.UserOptions) {
 
 	values = d.Enterprise.Values()
 	values["/Execute"] = d.File

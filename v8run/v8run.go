@@ -1,15 +1,15 @@
 package v8run
 
 import (
+	"fmt"
+	"github.com/khorevaa/go-AutoUpdate1C/v8run/types"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"strconv"
-	"syscall"
 
 	"context"
-	"github.com/khorevaa/go-v8runner/v8tools"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"strings"
 	"time"
 )
 
@@ -34,23 +34,45 @@ var ERROR_RUNNING_TIMEOUT = errors.New("error running Timeout executed")
 var ERROR_RUNNING_FAILED = errors.New("error running v8 fail")
 var ERROR_RUNNING_DATABASE_ERROR = errors.New("error running v8 database error")
 
+var VERSION_1S = "8.3"
+
 type Option func(options *RunOptions)
 
-func WithTimeout(timeout time.Duration) Option {
+func WithTimeout(timeout int64) Option {
 	return func(r *RunOptions) {
 		r.Timeout = timeout
+
+		if r.Context == nil {
+			r.Context = context.Background()
+		}
+
 	}
 }
 
-func WithOut(file string) Option {
+func WithContext(ctx context.Context) Option {
+	return func(r *RunOptions) {
+		r.Context = ctx
+	}
+}
+
+func WithOut(file string, noTruncate bool) Option {
 	return func(r *RunOptions) {
 		r.Out = file
+		r.tempOut = false
+		r.NoTruncate = noTruncate
+	}
+}
+
+func WithPath(path string) Option {
+	return func(r *RunOptions) {
+		r.v8path = path
 	}
 }
 
 func WithDumpResult(file string) Option {
 	return func(r *RunOptions) {
 		r.DumpResult = file
+		r.tempDumpResult = false
 	}
 }
 
@@ -61,17 +83,70 @@ func WithVersion(version string) Option {
 }
 
 type RunOptions struct {
-	Version    string
-	Timeout    time.Duration
-	Out        string
-	DumpResult string
-	v8path     string
+	Version        string
+	Timeout        int64
+	Out            string
+	NoTruncate     bool
+	tempOut        bool
+	DumpResult     string
+	tempDumpResult bool
+	v8path         string
+	Context        context.Context
+}
+
+func (ro *RunOptions) NewOutFile() {
+
+	tempLog, _ := ioutil.TempFile("", "v8_log_*.txt")
+
+	ro.Out = tempLog.Name()
+	ro.tempOut = true
+
+}
+
+func (ro *RunOptions) RemoveOutFile() {
+
+	_ = os.Remove(ro.Out)
+
+}
+
+func (ro *RunOptions) NewDumpResultFile() {
+
+	tempLog, _ := ioutil.TempFile("", "v8_DumpResult_*.txt")
+
+	ro.DumpResult = tempLog.Name()
+	ro.tempDumpResult = true
+
+}
+
+func (ro *RunOptions) RemoveDumpResultFile() {
+
+	_ = os.Remove(ro.DumpResult)
+
+}
+
+func (ro *RunOptions) RemoveTempFiles() {
+
+	if ro.tempDumpResult {
+		_ = os.Remove(ro.DumpResult)
+	}
+
+	if ro.tempOut {
+		_ = os.Remove(ro.Out)
+	}
+
 }
 
 func getV8Path(options *RunOptions) (string, error) {
 	if len(options.v8path) > 0 {
 		return options.v8path, nil
 	}
+
+	v8 := VERSION_1S
+	if len(options.Version) > 0 {
+		v8 = options.Version
+	}
+
+	fmt.Println(v8)
 
 	return "", ERROR_VERSION_NOT_FOUND
 }
@@ -88,11 +163,36 @@ func readDumpResult(file string) int {
 	return int(code)
 }
 
-func RunWithOptions(where Where, what Command, options *RunOptions) (int, error) {
+func runCommand(command string, args []string, opts *RunOptions) (err error) {
 
-	var exitCode int
+	cmd := exec.Command(command, args...)
+	err = cmd.Run()
 
-	if what.Check() {
+	return
+}
+
+func runCommandContext(ctx context.Context, command string, args []string, opts *RunOptions) (err error) {
+
+	// Create a new context and add a Timeout to it
+
+	runCtx := ctx
+	if opts.Timeout > 0 {
+
+		timeout := int64(time.Second) * opts.Timeout
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout))
+		defer cancel() // The cancel should be deferred so resources are cleaned up
+		runCtx = ctx
+	}
+	cmd := exec.CommandContext(runCtx, command, args...)
+
+	err = cmd.Run()
+
+	return
+}
+
+func RunWithOptions(where types.InfoBase, what types.Command, options *RunOptions) (int, error) {
+
+	if !what.Check() {
 		return EXITCODE_FAIL, ERROR_CHECK_RUNNING
 	}
 
@@ -102,45 +202,43 @@ func RunWithOptions(where Where, what Command, options *RunOptions) (int, error)
 		return EXITCODE_FAIL, err
 	}
 
-	// Create a new context and add a Timeout to it
-	ctx, cancel := context.WithTimeout(context.Background(), options.Timeout)
-	defer cancel() // The cancel should be deferred so resources are cleaned up
-
 	var args []string
 	args = append(args, what.Command())
-	args = append(args, where.ConnectString())
-	args = append(append(args, what.Args()...))
 
-	cmd := exec.CommandContext(ctx, commandV8, args...)
-
-	out, runErr := cmd.Output()
-
-	if runErr != nil {
-		// try to get the exit code
-		if exitError, ok := runErr.(*exec.ExitError); ok {
-			ws := exitError.Sys().(syscall.WaitStatus)
-			exitCode = ws.ExitStatus()
-		} else {
-			// This will happen (in OSX) if `name` is not available in $PATH,
-			// in this situation, exit code could not be get, and stderr will be
-			// empty string very likely, so we use the default fail code, and format err
-			// to string and set to stderr
-			log.Debugf("Could not get exit code for failed program: %v, %v", commandV8, args)
-			exitCode = EXITCODE_FAIL
-		}
-	} else {
-
-		// success, exitCode should be 0 if go is ok
-		ws := cmd.ProcessState.Sys().(syscall.WaitStatus)
-		exitCode = ws.ExitStatus()
-
+	connectString := where.ShortConnectString()
+	if what.Command() == COMMAND_CREATEINFOBASE {
+		connectString, err = where.CreateString()
 	}
 
-	// We want to Check the context error to see if the Timeout was executed.
-	// The error returned by cmd.Output() will be OS specific based on what
-	// happens when a process is killed.
-	if ctx.Err() == context.DeadlineExceeded {
+	if err != nil {
+		return EXITCODE_FAIL, err
+	}
+
+	args = append(args, connectString)
+	args = append(args, processUserOptions(what.Values())...)
+
+	args = append(args, fmt.Sprintf("/Out %s", options.Out))
+
+	if options.NoTruncate {
+		args = append(args, "-NoTruncate")
+	}
+
+	args = append(args, fmt.Sprintf("/DumpResult %s", options.DumpResult))
+	defer options.RemoveTempFiles()
+
+	var errRun error
+	if options.Context != nil {
+		errRun = runCommandContext(options.Context, commandV8, args, options)
+	} else {
+		errRun = runCommand(commandV8, args, options)
+	}
+
+	if options.Context != nil && options.Context.Err() == context.DeadlineExceeded {
 		return EXITCODE_FAIL, ERROR_RUNNING_TIMEOUT
+	}
+
+	if errRun != nil {
+		return EXITCODE_FAIL, ERROR_RUNNING_FAILED
 	}
 
 	dumpCode := readDumpResult(options.DumpResult)
@@ -167,30 +265,15 @@ func RunWithOptions(where Where, what Command, options *RunOptions) (int, error)
 
 func defaultOptions(command string) *RunOptions {
 
-	var options RunOptions
-	options.Timeout = time.Duration(120)
+	options := RunOptions{}
 
-	switch command {
-
-	case COMMANE_DESIGNER:
-	case COMMAND_ENTERPRISE:
-	case COMMAND_CREATEINFOBASE:
-	}
+	options.NewOutFile()
+	options.NewDumpResultFile()
 
 	return &options
 }
 
-type Where interface {
-	ConnectString() string
-}
-
-type Command interface {
-	Command() string
-	Args() []string
-	Check() bool
-}
-
-func Run(where Where, what Command, opts ...Option) (int, error) {
+func Run(where types.InfoBase, what types.Command, opts ...Option) (int, error) {
 
 	options := defaultOptions(what.Command())
 

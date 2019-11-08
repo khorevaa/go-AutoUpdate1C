@@ -1,110 +1,41 @@
 package v8run
 
-import "fmt"
-
-type UserOption func(Optioned)
-
-type Optioned interface {
-	setOption(key string, value interface{})
-}
-
-type CanUpdateDBCfg interface {
-	SetUpdateDBCfg(UpdateDBCfgOptions)
-}
-
-type UserOptions map[string]interface{}
-
-func (uo UserOptions) setOption(key string, value interface{}) {
-
-	_, ok := uo[key]
-	if !ok {
-		uo[key] = value
-	}
-}
-
-func (uo UserOptions) Append(uo2 UserOptions) {
-
-	for k, v := range uo2 {
-		uo.setOption(k, v)
-	}
-
-}
-
-func (uo UserOptions) Option(fn UserOption) {
-
-	fn(uo)
-
-}
+import "github.com/khorevaa/go-AutoUpdate1C/v8run/types"
 
 type Designer struct {
-	UserOptions
+	types.UserOptions
 
 	disableStartupDialogs  bool
 	disableStartupMessages bool
 	visible                bool
 }
 
-func (d Designer) Command() string {
+func (d *Designer) Command() string {
 	return COMMANE_DESIGNER
 }
 
-func (d Designer) Check() bool {
+func (d *Designer) Check() bool {
 
 	return true
 }
 
-func (d Designer) Values() (values UserOptions) {
+func (d *Designer) Values() (values types.UserOptions) {
 
 	values = make(map[string]interface{})
 
 	values.Append(d.UserOptions)
 
-	values.setOption("/DisableStartupDialogs", d.disableStartupDialogs)
-	values.setOption("/DisableStartupDialogs", d.disableStartupDialogs)
-	values.setOption("/Visible", d.visible)
+	values.SetOption("/DisableStartupDialogs", d.disableStartupDialogs)
+	values.SetOption("/DisableStartupDialogs", d.disableStartupDialogs)
+	values.SetOption("/Visible", d.visible)
 
 	return values
 
 }
 
-func processArgs(options UserOptions) (args []string) {
+func NewDesigner(opts ...types.UserOption) *Designer {
 
-	for k, v := range options {
-
-		switch v.(type) {
-
-		case bool:
-
-			val, _ := v.(bool)
-
-			if val {
-				args = append(args, k)
-			}
-
-		case string:
-
-			val, _ := v.(string)
-
-			if len(val) > 0 {
-				args = append(args, fmt.Sprintf("%s %s", k, val))
-			}
-
-		case Optioned:
-
-		default:
-
-			continue
-
-		}
-
-	}
-
-	return
-}
-
-func NewDesigner(opts ...UserOption) Designer {
-
-	d := Designer{
+	d := &Designer{
 		UserOptions: make(map[string]interface{}),
 	}
 
@@ -115,15 +46,9 @@ func NewDesigner(opts ...UserOption) Designer {
 	return d
 }
 
-func WithUnlockCode(uc string) UserOption {
-	return func(o Optioned) {
-		o.setOption("/UC", uc)
-	}
-}
+func newDefaultDesigner() *Designer {
 
-func newDefaultDesigner() Designer {
-
-	d := Designer{
+	d := &Designer{
 		disableStartupDialogs:  true,
 		disableStartupMessages: true,
 		visible:                false,
@@ -132,53 +57,49 @@ func newDefaultDesigner() Designer {
 	return d
 }
 
-func WithUpdateDBCfg(update UpdateDBCfgOptions) func(CanUpdateDBCfg) {
-	return func(options CanUpdateDBCfg) {
-		options.SetUpdateDBCfg(update)
-	}
-}
-
 type LoadCfgOptions struct {
-	Designer
+	*Designer
 	File        string
 	Extension   string
-	UpdateDBCfg UpdateDBCfgOptions
+	UpdateDBCfg *UpdateDBCfgOptions
 }
 
-func (d LoadCfgOptions) Values() (values UserOptions) {
+func (d *LoadCfgOptions) Values() (values types.UserOptions) {
 
 	values = d.Designer.Values()
 	values["/LoadCfg"] = d.File
 	values["-Extension"] = d.Extension
 
-	values.Append(d.UpdateDBCfg.Values())
+	if d.UpdateDBCfg != nil {
+		values.Append(d.UpdateDBCfg.Values())
+	}
 
 	return
 
 }
 
-func (d LoadCfgOptions) SetUpdateDBCfg(updateDBCfg UpdateDBCfgOptions) {
+func (d *LoadCfgOptions) WithUpdateDBCfg(updateDBCfg *UpdateDBCfgOptions) {
 	d.UpdateDBCfg = updateDBCfg
 }
 
 type DumpCfgOptions struct {
-	Designer
+	*Designer
 	File      string
 	Extension string
 }
 
-func (d DumpCfgOptions) Values() (values UserOptions) {
+func (d *DumpCfgOptions) Values() (values types.UserOptions) {
 
 	values = d.Designer.Values()
-	values.setOption("/DumpCfg", d.File)
-	values.setOption("-Extension", d.Extension)
+	values.SetOption("/DumpCfg", d.File)
+	values.SetOption("-Extension", d.Extension)
 
 	return
 
 }
 
 type UpdateCfgOptions struct {
-	Designer
+	*Designer
 	//<имя cf | cfu-файла>
 	File string
 
@@ -203,33 +124,33 @@ type UpdateCfgOptions struct {
 	//— вывести список всех дважды измененных свойств.
 	DumpListOfTwiceChangedProperties bool
 
-	UpdateDBCfg UpdateDBCfgOptions
+	UpdateDBCfg *UpdateDBCfgOptions
 }
 
-func (d UpdateCfgOptions) Values() (values UserOptions) {
+func (d UpdateCfgOptions) Values() (values types.UserOptions) {
 
 	values = d.Designer.Values()
-	values.setOption("/UpdateCfg", d.File)
-	values.setOption("-Force", d.Force)
-	values.setOption("-Settings", d.Settings)
+	values.SetOption("/UpdateCfg", d.File)
+	values.SetOption("-Force", d.Force)
+	values.SetOption("-Settings", d.Settings)
 
-	values.Append(d.UpdateDBCfg.Values())
+	if d.UpdateDBCfg != nil {
+		values.Append(d.UpdateDBCfg.Values())
+	}
 
 	return
 
 }
 
-func (d UpdateCfgOptions) SetUpdateDBCfg(updateDBCfg UpdateDBCfgOptions) {
+func (d *UpdateCfgOptions) WithUpdateDBCfg(updateDBCfg *UpdateDBCfgOptions) {
 	d.UpdateDBCfg = updateDBCfg
 }
-
-type UpdateDBCfgOption func(UpdateDBCfgOptions)
 
 ///UpdateDBCfg [–Dynamic<Режим>] [-BackgroundStart] [-BackgroundCancel]
 //[-BackgroundFinish [-Visible]] [-BackgroundSuspend] [-BackgroundResume]
 //[-WarningsAsErrors] [-Server [-v1|-v2]][-Extension <имя расширения>]
 type UpdateDBCfgOptions struct {
-	Designer
+	*Designer
 
 	Use bool
 
@@ -289,15 +210,15 @@ type UpdateDBCfgOptions struct {
 	Extension string
 }
 
-func (d UpdateDBCfgOptions) Values() (values UserOptions) {
+func (d *UpdateDBCfgOptions) Values() (values types.UserOptions) {
 
 	values = d.Designer.Values()
 
 	if d.Use {
-		values.setOption("/UpdateDBCfg", true)
-		values.setOption("-Server", d.Server)
-		values.setOption("-WarningsAsErrors", d.WarningsAsErrors)
-		values.setOption("-Extension", d.Extension)
+		values.SetOption("/UpdateDBCfg", true)
+		values.SetOption("-Server", d.Server)
+		values.SetOption("-WarningsAsErrors", d.WarningsAsErrors)
+		values.SetOption("-Extension", d.Extension)
 	}
 	return
 
@@ -306,15 +227,15 @@ func (d UpdateDBCfgOptions) Values() (values UserOptions) {
 // /DumpIB <имя файла>
 //— выгрузка информационной базы в командном режиме.
 type DumpIBOptions struct {
-	Designer
+	*Designer
 
 	File string
 }
 
-func (d DumpIBOptions) Values() (values UserOptions) {
+func (d *DumpIBOptions) Values() (values types.UserOptions) {
 
 	values = d.Designer.Values()
-	values.setOption("/DumpIB", d.File)
+	values.SetOption("/DumpIB", d.File)
 
 	return
 }
@@ -323,15 +244,15 @@ func (d DumpIBOptions) Values() (values UserOptions) {
 // — загрузка информационной базы в командном режиме.
 // Если файл информационной базы отсутствует в указанном каталоге, будет создана новая информационная база.
 type RestoreIBOptions struct {
-	Designer
+	*Designer
 
 	File string
 }
 
-func (d RestoreIBOptions) Values() (values UserOptions) {
+func (d *RestoreIBOptions) Values() (values types.UserOptions) {
 
 	values = d.Designer.Values()
-	values.setOption("/RestoreIB", d.File)
+	values.SetOption("/RestoreIB", d.File)
 
 	return
 }

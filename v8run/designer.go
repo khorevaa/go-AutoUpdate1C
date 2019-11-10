@@ -5,9 +5,9 @@ import "github.com/khorevaa/go-AutoUpdate1C/v8run/types"
 type Designer struct {
 	types.UserOptions
 
-	disableStartupDialogs  bool
-	disableStartupMessages bool
-	visible                bool
+	DisableStartupDialogs  bool `v8:"/DisableStartupDialogs" json:"disable_startup_dialogs"`
+	DisableStartupMessages bool `v8:"/DisableStartupDialogs" json:"disable_startup_messages"`
+	Visible                bool `v8:"/Visible" json:"visible"`
 }
 
 func (d *Designer) Command() string {
@@ -25,9 +25,9 @@ func (d *Designer) Values() (values types.UserOptions) {
 
 	values.Append(d.UserOptions)
 
-	values.SetOption("/DisableStartupDialogs", d.disableStartupDialogs)
-	values.SetOption("/DisableStartupDialogs", d.disableStartupDialogs)
-	values.SetOption("/Visible", d.visible)
+	values.SetOption("/DisableStartupDialogs", d.DisableStartupDialogs)
+	values.SetOption("/DisableStartupDialogs", d.DisableStartupDialogs)
+	values.SetOption("/Visible", d.Visible)
 
 	return values
 
@@ -49,19 +49,22 @@ func NewDesigner(opts ...types.UserOption) *Designer {
 func newDefaultDesigner() *Designer {
 
 	d := &Designer{
-		disableStartupDialogs:  true,
-		disableStartupMessages: true,
-		visible:                false,
+		DisableStartupDialogs:  true,
+		DisableStartupMessages: true,
+		Visible:                false,
 	}
 
 	return d
 }
 
 type LoadCfgOptions struct {
-	*Designer
-	File        string
-	Extension   string
-	UpdateDBCfg *UpdateDBCfgOptions
+	*Designer `v8:",inherit" json:"designer"`
+
+	command struct{} `v8:"/LoadCfg" json:"-"`
+	File    string   `v8:",arg" json:"file"`
+
+	Extension   string              `v8:"-Extension, optional" json:"extension"`
+	UpdateDBCfg *UpdateDBCfgOptions `v8:",inherit" json:"update_db_cfg"`
 }
 
 func (d *LoadCfgOptions) Values() (values types.UserOptions) {
@@ -83,9 +86,12 @@ func (d *LoadCfgOptions) WithUpdateDBCfg(updateDBCfg *UpdateDBCfgOptions) {
 }
 
 type DumpCfgOptions struct {
-	*Designer
-	File      string
-	Extension string
+	*Designer `v8:",inherit" json:"designer"`
+
+	command struct{} `v8:"/DumpCfg" json:"-"`
+	File    string   `v8:",arg" json:"file"`
+
+	Extension string `v8:"-Extension, optional" json:"extension"`
 }
 
 func (d *DumpCfgOptions) Values() (values types.UserOptions) {

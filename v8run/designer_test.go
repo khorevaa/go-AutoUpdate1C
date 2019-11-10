@@ -10,7 +10,7 @@ import (
 
 type designerTestSuite struct {
 	baseTestSuite
-	tempIB InfoBase
+	tempIB types.InfoBase
 	v8path string
 	ibPath string
 }

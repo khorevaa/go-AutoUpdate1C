@@ -27,14 +27,14 @@ func (t *marshalTestSuite) TestUnmarshalRepository() {
 		},
 		Extension:                 "temp",
 		AllowConfigurationChanges: false,
-		ChangesAllowedRule:        REPOSITORY_SUPPORT_IS_EDITABLE,
-		ChangesNotRecommendedRule: REPOSITORY_SUPPORT_NOT_EDITABLE,
-		NoBind:                    true,
+		//ChangesAllowedRule:        REPOSITORY_SUPPORT_IS_EDITABLE,
+		//ChangesNotRecommendedRule: REPOSITORY_SUPPORT_NOT_EDITABLE,
+		NoBind: true,
 	}
 
-	args := v8Marshal(object)
+	args, err := v8Marshal(object)
 
-	//t.r().NoError(err)
+	t.r().NoError(err)
 
 	t.r().Equal(len(args), 1, "len must be equal")
 	//t.r().Equal(codes[0].PromocodeID, "START", "Промокод должен быть START")

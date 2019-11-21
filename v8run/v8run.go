@@ -215,7 +215,14 @@ func RunWithOptions(where types.InfoBase, what types.Command, options *RunOption
 	}
 
 	args = append(args, connectString)
-	args = append(args, processUserOptions(what.Values())...)
+
+	whatArgs, err := what.Values()
+
+	if err != nil {
+		return EXITCODE_FAIL, err
+	}
+
+	args = append(args, whatArgs...)
 
 	args = append(args, fmt.Sprintf("/Out %s", options.Out))
 

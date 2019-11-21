@@ -5,9 +5,9 @@ import "github.com/khorevaa/go-AutoUpdate1C/v8run/types"
 type CreateInfoBaseOptions struct {
 	types.UserOptions
 
-	disableStartupDialogs  bool
-	disableStartupMessages bool
-	visible                bool
+	DisableStartupDialogs  bool `v8:"/DisableStartupDialogs" json:"disable_startup_dialogs"`
+	DisableStartupMessages bool `v8:"/DisableStartupDialogs" json:"disable_startup_messages"`
+	Visible                bool `v8:"/Visible" json:"visible"`
 }
 
 func (d *CreateInfoBaseOptions) Command() string {
@@ -19,26 +19,18 @@ func (d *CreateInfoBaseOptions) Check() bool {
 	return true
 }
 
-func (d *CreateInfoBaseOptions) Values() (values types.UserOptions) {
+func (d *CreateInfoBaseOptions) Values() (values []string, err error) {
 
-	values = make(map[string]interface{})
-
-	values.Append(d.UserOptions)
-
-	values.SetOption("/DisableStartupDialogs", d.disableStartupDialogs)
-	values.SetOption("/DisableStartupDialogs", d.disableStartupDialogs)
-	values.SetOption("/Visible", d.visible)
-
-	return values
+	return v8Marshal(d)
 
 }
 
 func newDefaultCreateInfoBase() *CreateInfoBaseOptions {
 
 	d := &CreateInfoBaseOptions{
-		disableStartupDialogs:  true,
-		disableStartupMessages: true,
-		visible:                false,
+		DisableStartupDialogs:  true,
+		DisableStartupMessages: true,
+		Visible:                false,
 	}
 
 	return d

@@ -9,7 +9,7 @@ type InfoBase interface {
 
 type Command interface {
 	Command() string
-	Values() (values UserOptions)
+	Values() ([]string, error)
 	Check() bool
 }
 

@@ -5,20 +5,18 @@ import (
 	"io/ioutil"
 )
 
-func LoadCfg(file string, opts ...types.UserOption) *LoadCfgOptions {
+func LoadCfg(file string) *LoadCfgOptions {
 
 	command := &LoadCfgOptions{
 		File:     file,
 		Designer: newDefaultDesigner(),
 	}
 
-	processOptions(command, opts)
-
 	return command
 
 }
 
-func UpdateCfg(file string, force bool, opts ...types.UserOption) *UpdateCfgOptions {
+func UpdateCfg(file string, force bool) *UpdateCfgOptions {
 
 	command := &UpdateCfgOptions{
 		File:     file,
@@ -26,60 +24,53 @@ func UpdateCfg(file string, force bool, opts ...types.UserOption) *UpdateCfgOpti
 		Designer: newDefaultDesigner(),
 	}
 
-	processOptions(command, opts)
-
 	return command
 
 }
 
-func LoadExtensionCfg(file, extension string, opts ...types.UserOption) *LoadCfgOptions {
+func LoadExtensionCfg(file, extension string) *LoadCfgOptions {
 
-	command := LoadCfg(file, opts...)
+	command := LoadCfg(file)
 	command.Extension = extension
 
 	return command
 
 }
 
-func DumpCfg(file string, opts ...types.UserOption) *DumpCfgOptions {
+func DumpCfg(file string) *DumpCfgOptions {
 
 	command := &DumpCfgOptions{
 		File:     file,
 		Designer: newDefaultDesigner(),
 	}
 
-	processOptions(command, opts)
-
 	return command
 
 }
 
-func DumpExtensionCfg(file, extension string, opts ...types.UserOption) *DumpCfgOptions {
+func DumpExtensionCfg(file, extension string) *DumpCfgOptions {
 
-	command := DumpCfg(file, opts...)
+	command := DumpCfg(file)
 	command.Extension = extension
 	return command
 
 }
 
-func UpdateDBCfg(server bool, Dynamic bool, opts ...types.UserOption) *UpdateDBCfgOptions {
+func UpdateDBCfg(server bool, Dynamic bool) *UpdateDBCfgOptions {
 
 	command := &UpdateDBCfgOptions{
 		Designer: newDefaultDesigner(),
-		Use:      true,
 		Server:   server,
 		Dynamic:  Dynamic,
 	}
-
-	processOptions(command, opts)
 
 	return command
 
 }
 
-func UpdateDBExtensionCfg(extension string, server bool, Dynamic bool, opts ...types.UserOption) *UpdateDBCfgOptions {
+func UpdateDBExtensionCfg(extension string, server bool, Dynamic bool) *UpdateDBCfgOptions {
 
-	command := UpdateDBCfg(server, Dynamic, opts...)
+	command := UpdateDBCfg(server, Dynamic)
 	command.Extension = extension
 
 	return command
@@ -93,7 +84,6 @@ func DumpIB(file string, opts ...types.UserOption) *DumpIBOptions {
 		File:     file,
 	}
 
-	processOptions(command, opts)
 	return command
 }
 
@@ -103,8 +93,6 @@ func RestoreIB(file string, opts ...types.UserOption) *RestoreIBOptions {
 		Designer: newDefaultDesigner(),
 		File:     file,
 	}
-
-	processOptions(command, opts)
 
 	return command
 }
@@ -119,8 +107,6 @@ func CreateInfoBase(opts ...types.UserOption) *CreateInfoBaseOptions {
 
 	command := newDefaultCreateInfoBase()
 
-	processOptions(command, opts)
-
 	return command
 
 }
@@ -131,8 +117,6 @@ func Execute(file string, opts ...types.UserOption) *ExecuteOptions {
 		Enterprise: newDefaultEnterprise(),
 		File:       file,
 	}
-
-	processOptions(command, opts)
 
 	return command
 }

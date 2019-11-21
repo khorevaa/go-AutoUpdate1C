@@ -7,7 +7,6 @@ import (
 )
 
 const TagSeparator = ","
-
 const TAG_NAMESPACE = "v8"
 
 func Tag(data interface{}, tagName, fieldName string) (string, error) {
@@ -30,10 +29,13 @@ func Tag(data interface{}, tagName, fieldName string) (string, error) {
 }
 
 type FieldTagInfo struct {
-	Name     string
-	Inherit  bool
-	Optional bool
-	Argument bool
+	Name        string
+	Inherit     bool
+	Optional    bool
+	Argument    bool
+	TrueFormat  string
+	FalseFormat string
+	NoSnap      bool
 }
 
 func GetFieldTagInfo(sField reflect.StructField) *FieldTagInfo {

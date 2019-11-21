@@ -1,5 +1,43 @@
 package v8run
 
+type bitnessType int
+type exeType int
+
+const (
+	V8_x64 bitnessType = iota
+	V8_x32
+	V8_x32x64
+	V8_x64x32
+)
+
+const (
+	platform exeType = iota
+	thinkClient
+	rac
+)
+
+type findOptions struct {
+	exeType     exeType
+	versionMask string
+	v8bitness   bitnessType
+}
+
+func PlatformPath(version string) {
+
+}
+
+func ThinkClientPath(version string) {
+
+}
+
+func RACPath(version string) {
+
+}
+
+func findPath(findOptions) {
+
+}
+
 //
 //import (
 //	"github.com/labstack/gommon/log"

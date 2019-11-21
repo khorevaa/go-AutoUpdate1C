@@ -27,15 +27,15 @@ func (t RepositoryRightType) MarshalV8() (string, error) {
 type Repository struct {
 	///ConfigurationRepositoryF <каталог хранилища>
 	//— указание имени каталога хранилища.
-	Path string `v8:"ConfigurationRepositoryF" json:"path"`
+	Path string `v8:"/ConfigurationRepositoryF" json:"path"`
 
 	///ConfigurationRepositoryN <имя>
 	//— указание имени пользователя хранилища.
-	User string `v8:"ConfigurationRepositoryN" json:"user"`
+	User string `v8:"/ConfigurationRepositoryN" json:"user"`
 
 	///ConfigurationRepositoryP <пароль>
 	//— указание пароля пользователя хранилища.
-	Password string `v8:"ConfigurationRepositoryP, optional" json:"password"`
+	Password string `v8:"/ConfigurationRepositoryP, optional" json:"password"`
 }
 
 ///ConfigurationRepositoryAddUser [-Extension <имя расширения>] -User <Имя> -Pwd <Пароль> -Rights <Права> [-RestoreDeletedUser]

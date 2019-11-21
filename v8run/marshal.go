@@ -16,7 +16,7 @@ type Marshaler interface {
 	MarshalV8() (string, error)
 }
 
-func v8Marshal(object interface{}) []string {
+func v8Marshal(object interface{}) ([]string, error) {
 
 	var fieldsList []string
 
@@ -42,20 +42,18 @@ func v8Marshal(object interface{}) []string {
 		iface := reflect.Indirect(v).FieldByName(field.Name).Interface()
 
 		// if the field is a pointer to a struct, follow the pointer then create fieldinfo for each field
-		if field.Type.Kind() == reflect.Ptr && field.Type.Elem().Kind() == reflect.Struct {
+		if (field.Type.Kind() == reflect.Ptr && field.Type.Elem().Kind() == reflect.Struct) ||
+			field.Type.Kind() == reflect.Struct {
 			// unless it implements marshalText or marshalCSV. Structs that implement this
 			// should result in one iface and not have their fields exposed
 			if fieldInfo.Inherit {
-				fieldsList = append(fieldsList, v8Marshal(iface)...)
-				continue
-			}
-		}
-		// if the field is a struct, create a fieldInfo for each of its fields
-		if field.Type.Kind() == reflect.Struct {
-			// unless it implements marshalText or marshalCSV. Structs that implement this
-			// should result in one iface and not have their fields exposed
-			if fieldInfo.Inherit {
-				fieldsList = append(fieldsList, v8Marshal(iface)...)
+				inheritFeild, err := v8Marshal(iface)
+
+				if err != nil {
+					return nil, err
+				}
+
+				fieldsList = append(fieldsList, inheritFeild...)
 				continue
 			}
 		}
@@ -66,18 +64,20 @@ func v8Marshal(object interface{}) []string {
 			v, err := m.MarshalV8()
 			if err != nil {
 				_ = fmt.Errorf("error marshal type: %s", err)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			if needFieldValue(v, fieldInfo) {
+
+				return nil, newNeedValueError(field)
+
+			}
+
+			fieldArg := getArgValue(v, fieldInfo)
+			if len(fieldArg) == 0 {
 				continue
-			}
-
-			err = checkField(v, fieldInfo)
-			if err != nil {
-				continue // TODO Error
-			}
-
-			fieldArg := fieldInfo.Name + " " + v
-
-			if fieldInfo.Argument {
-				fieldArg = v
 			}
 
 			fieldsList = append(fieldsList, fieldArg)
@@ -92,27 +92,35 @@ func v8Marshal(object interface{}) []string {
 
 			v := iface.(string)
 
-			err := checkField(v, fieldInfo)
-			if err != nil {
-				continue // TODO Error
+			if needFieldValue(v, fieldInfo) {
+				continue
 			}
 
-			fieldArg := fieldInfo.Name + " " + v
+			fieldArg := getArgValue(v, fieldInfo)
+			if len(fieldArg) == 0 {
+				continue
+			}
+
 			fieldsList = append(fieldsList, fieldArg)
 
 		case bool:
 
-			fieldArg := fieldInfo.Name
+			v := iface.(bool)
 
-			if !fieldInfo.Inherit {
-
+			if !v {
+				continue
 			}
 
+			fieldArg := fieldInfo.Name
 			fieldsList = append(fieldsList, fieldArg)
 
 		case int, int32, int64:
 
-			fieldArg := fieldInfo.Name + " " + strconv.FormatInt(iface.(int64), 10)
+			fieldArg := getArgValue(strconv.FormatInt(iface.(int64), 10), fieldInfo)
+			if len(fieldArg) == 0 {
+				continue
+			}
+
 			fieldsList = append(fieldsList, fieldArg)
 
 		case nil:
@@ -120,23 +128,38 @@ func v8Marshal(object interface{}) []string {
 		}
 
 	}
-	return fieldsList
+	return fieldsList, nil
 
 }
 
-func checkField(value string, tagInfo *tags.FieldTagInfo) error {
+func getArgValue(value string, fieldInfo *tags.FieldTagInfo) string {
 
-	if tagInfo.Argument && len(value) == 0 {
-		return errors.New("need value")
+	if fieldInfo.Argument {
+
+		return value
+
 	}
 
-	if tagInfo.Optional && len(value) == 0 {
-		return nil
+	if fieldInfo.Optional && len(value) == 0 {
+		return ""
 	}
 
-	if len(value) == 0 {
-		return errors.New("need value")
+	fieldArg := fieldInfo.Name + " " + value
+
+	return fieldArg
+}
+
+func newNeedValueError(field reflect.StructField) error {
+
+	return errors.New(fmt.Sprintf("error marshal need field: %s non zero-value", field.Name))
+
+}
+
+func needFieldValue(value string, tagInfo *tags.FieldTagInfo) bool {
+
+	if tagInfo.Optional {
+		return false
 	}
 
-	return nil
+	return len(value) == 0
 }

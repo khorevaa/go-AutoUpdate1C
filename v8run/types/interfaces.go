@@ -10,7 +10,7 @@ type InfoBase interface {
 type Command interface {
 	Command() string
 	Values() ([]string, error)
-	Check() bool
+	Check() error
 }
 
 type Optioned interface {

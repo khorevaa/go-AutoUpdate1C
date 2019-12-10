@@ -27,9 +27,9 @@ func (d *Enterprise) Command() string {
 	return COMMAND_ENTERPRISE
 }
 
-func (d *Enterprise) Check() bool {
+func (d *Enterprise) Check() error {
 
-	return true
+	return nil
 }
 
 func NewEnterprise(opts ...types.UserOption) *Enterprise {

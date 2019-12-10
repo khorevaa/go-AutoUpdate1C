@@ -28,7 +28,7 @@ func (t *createInfoBaseTestSuite) TestCreateTempInfoBase() {
 
 	ib := NewTempIB()
 
-	_, err := Run(ib, CreateTempInfoBase(),
+	err := Run(ib, CreateInfoBase(),
 		WithPath("/opt/1cv8/8.3.15.1194/1cv8"),
 		WithTimeout(30),
 		WithOut("/Users/khorevaa/GolandProjects/go-AutoUpdate1C/v8run/log.txt", false))

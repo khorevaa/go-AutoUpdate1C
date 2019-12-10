@@ -18,6 +18,10 @@ type Marshaler interface {
 
 func v8Marshal(object interface{}) ([]string, error) {
 
+	if object == nil || (reflect.ValueOf(object).Kind() == reflect.Ptr && reflect.ValueOf(object).IsNil()) {
+		return []string{}, nil
+	}
+
 	var fieldsList []string
 
 	rType := reflect.TypeOf(object).Elem()

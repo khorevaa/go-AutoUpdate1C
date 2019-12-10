@@ -97,12 +97,6 @@ func RestoreIB(file string, opts ...types.UserOption) *RestoreIBOptions {
 	return command
 }
 
-func CreateTempInfoBase(opts ...types.UserOption) *CreateInfoBaseOptions {
-
-	return CreateInfoBase(opts...)
-
-}
-
 func CreateInfoBase(opts ...types.UserOption) *CreateInfoBaseOptions {
 
 	command := newDefaultCreateInfoBase()

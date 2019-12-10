@@ -3,7 +3,10 @@ package v8run
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"os"
 )
+
+var pwd, _ = os.Getwd()
 
 type baseTestSuite struct {
 	suite.Suite

@@ -14,9 +14,9 @@ func (d *Designer) Command() string {
 	return COMMANE_DESIGNER
 }
 
-func (d *Designer) Check() bool {
+func (d *Designer) Check() error {
 
-	return true
+	return nil
 }
 
 func (d *Designer) Values() (values []string, err error) {
@@ -85,7 +85,7 @@ type UpdateCfgOptions struct {
 	File string `v8:"/UpdateCfg" json:"file"`
 
 	// <имя файла настроек> — содержит имя файла настроек объединения.
-	Settings string `v8:"-Settings" json:"ыettings"`
+	Settings string `v8:"-Settings" json:"settings"`
 
 	// если в настройках есть объекты, не включенные в список обновляемых и отсутствующие в основной конфигурации,
 	// на которые есть ссылки из объектов, включенных в список, то такие объекты также помечаются для обновления,
@@ -108,7 +108,7 @@ type UpdateCfgOptions struct {
 	UpdateDBCfg *UpdateDBCfgOptions `v8:",inherit" json:"update_db"`
 }
 
-func (d UpdateCfgOptions) Values() ([]string, error) {
+func (d *UpdateCfgOptions) Values() ([]string, error) {
 
 	return v8Marshal(d)
 
@@ -128,7 +128,7 @@ type UpdateDBCfgOptions struct {
 	//-Dynamic+ — Значение параметра по умолчанию.
 	// Сначала выполняется попытка динамического обновления, если она завершена неудачно, будет запущено фоновое обновление.
 	//-Dynamic–  — Динамическое обновление запрещено.
-	Dynamic bool `v8:"-Dynamic, no_span, bool_false=-Dynamic-, bool_true=-Dynamic+" json:"dynamic"`
+	Dynamic bool `v8:"-Dynamic, no_span, bool_false=-, bool_true=+" json:"dynamic"`
 
 	//-BackgroundStart [-Dynamic<Режим>] — будет запущено фоновое обновление конфигурации,
 	// текущий сеанс будет завершен. Если обновление уже выполняется, будет выдана ошибка.

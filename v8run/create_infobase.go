@@ -14,9 +14,9 @@ func (d *CreateInfoBaseOptions) Command() string {
 	return COMMAND_CREATEINFOBASE
 }
 
-func (d *CreateInfoBaseOptions) Check() bool {
+func (d *CreateInfoBaseOptions) Check() error {
 
-	return true
+	return nil
 }
 
 func (d *CreateInfoBaseOptions) Values() (values []string, err error) {

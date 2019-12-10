@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"context"
-	"github.com/pkg/errors"
+	"github.com/khorevaa/go-AutoUpdate1C/v8run/errors"
 	"time"
 )
 
@@ -19,20 +19,6 @@ const (
 	COMMAND_ENTERPRISE           = "ENTERPRISE"
 	DEFAULT_1SSERVER_PORT  int16 = 1541
 )
-
-const (
-	EXITCODE_SUCCESS        = 0   // команда выполнена успешно.
-	EXITCODE_FAIL           = 1   // при выполнении команды произошла ошибка.
-	EXITCODE_DATABASE_ERROR = 101 // при выполнении команды обнаружены ошибки в данных.
-
-)
-
-var ERROR_CHECK_RUNNING = errors.New("error checking runeble")
-var ERROR_VERSION_NOT_FOUND = errors.New("error Version is not found")
-var ERROR_RUNNING_TIMEOUT = errors.New("error running Timeout executed")
-
-var ERROR_RUNNING_FAILED = errors.New("error running v8 fail")
-var ERROR_RUNNING_DATABASE_ERROR = errors.New("error running v8 database error")
 
 var VERSION_1S = "8.3"
 
@@ -83,15 +69,16 @@ func WithVersion(version string) Option {
 }
 
 type RunOptions struct {
-	Version        string
-	Timeout        int64
-	Out            string
-	NoTruncate     bool
-	tempOut        bool
-	DumpResult     string
-	tempDumpResult bool
-	v8path         string
-	Context        context.Context
+	Version              string
+	Timeout              int64
+	Out                  string
+	NoTruncate           bool
+	tempOut              bool
+	DumpResult           string
+	tempDumpResult       bool
+	v8path               string
+	Context              context.Context
+	UseLongConnectString bool
 }
 
 func (ro *RunOptions) NewOutFile() {
@@ -101,6 +88,7 @@ func (ro *RunOptions) NewOutFile() {
 	ro.Out = tempLog.Name()
 	ro.tempOut = true
 
+	tempLog.Close()
 }
 
 func (ro *RunOptions) RemoveOutFile() {
@@ -115,6 +103,8 @@ func (ro *RunOptions) NewDumpResultFile() {
 
 	ro.DumpResult = tempLog.Name()
 	ro.tempDumpResult = true
+
+	tempLog.Close()
 
 }
 
@@ -148,7 +138,10 @@ func getV8Path(options *RunOptions) (string, error) {
 
 	fmt.Println(v8)
 
-	return "", ERROR_VERSION_NOT_FOUND
+	err := errors.NotExist.Newf("Version %s not found", options.Version)
+	errors.AddErrorContext(err, "version", options.Version)
+	return "", err
+
 }
 
 func readOut(file string) (string, error) {
@@ -168,109 +161,182 @@ func runCommand(command string, args []string, opts *RunOptions) (err error) {
 	cmd := exec.Command(command, args...)
 	err = cmd.Run()
 
+	if err != nil {
+		errors.Runtime.Wrapf(err, "run command exec error")
+	}
+
 	return
 }
 
 func runCommandContext(ctx context.Context, command string, args []string, opts *RunOptions) (err error) {
 
-	// Create a new context and add a Timeout to it
-
 	runCtx := ctx
 	if opts.Timeout > 0 {
 
 		timeout := int64(time.Second) * opts.Timeout
-		ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout))
+		ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(timeout))
 		defer cancel() // The cancel should be deferred so resources are cleaned up
-		runCtx = ctx
+		runCtx = ctxTimeout
 	}
+
 	cmd := exec.CommandContext(runCtx, command, args...)
 
 	err = cmd.Run()
 
+	switch {
+	case ctx.Err() == context.DeadlineExceeded:
+		err = errors.Timeout.Wrap(err, "run command context timeout exceeded")
+	case err != nil:
+		err = errors.Runtime.Wrap(err, "run command context exec error")
+	}
+
 	return
 }
 
-func RunWithOptions(where types.InfoBase, what types.Command, options *RunOptions) (int, error) {
+func RunWithOptions(where types.InfoBase, what types.Command, options *RunOptions) error {
 
-	if !what.Check() {
-		return EXITCODE_FAIL, ERROR_CHECK_RUNNING
+	checkErr := what.Check()
+	if checkErr != nil {
+		return checkErr
 	}
 
 	commandV8, err := getV8Path(options)
 
 	if err != nil {
-		return EXITCODE_FAIL, err
+		return err
+	}
+
+	connectString, errConnectString := getConnectString(where, what, options)
+	if errConnectString != nil {
+		return errConnectString
 	}
 
 	var args []string
 	args = append(args, what.Command())
-
-	connectString := where.ShortConnectString()
-	if what.Command() == COMMAND_CREATEINFOBASE {
-		connectString, err = where.CreateString()
-	}
-
-	if err != nil {
-		return EXITCODE_FAIL, err
-	}
-
 	args = append(args, connectString)
 
-	whatArgs, err := what.Values()
+	whatArgs, errWhatArgs := getWhatArgs(what)
 
-	if err != nil {
-		return EXITCODE_FAIL, err
+	if errWhatArgs != nil {
+		return errWhatArgs
 	}
-
 	args = append(args, whatArgs...)
 
-	args = append(args, fmt.Sprintf("/Out %s", options.Out))
+	args = appendRunOptionsArgs(args, options)
 
-	if options.NoTruncate {
-		args = append(args, "-NoTruncate")
-	}
-
-	args = append(args, fmt.Sprintf("/DumpResult %s", options.DumpResult))
 	defer options.RemoveTempFiles()
 
 	var errRun error
+
 	if options.Context != nil {
 		errRun = runCommandContext(options.Context, commandV8, args, options)
 	} else {
 		errRun = runCommand(commandV8, args, options)
 	}
 
-	if options.Context != nil && options.Context.Err() == context.DeadlineExceeded {
-		return EXITCODE_FAIL, ERROR_RUNNING_TIMEOUT
+	if errRun != nil {
+		outLog, _ := readOut(options.Out)
+		errorWithOut := errors.AddErrorContext(errRun, "out", outLog)
+		return errorWithOut
 	}
 
-	if errRun != nil {
-		return EXITCODE_FAIL, ERROR_RUNNING_FAILED
+	dumpErr := checkRunResult(options)
+
+	if dumpErr != nil {
+		return dumpErr
 	}
+
+	return nil
+}
+
+func checkRunResult(options *RunOptions) error {
 
 	dumpCode := readDumpResult(options.DumpResult)
 
 	switch dumpCode {
 
-	case EXITCODE_SUCCESS:
+	case 0:
 
-		return EXITCODE_SUCCESS, nil
+		return nil
 
-	case EXITCODE_FAIL:
+	case 1:
 
-		return EXITCODE_FAIL, ERROR_RUNNING_FAILED
+		outLog, _ := readOut(options.Out)
+		err := errors.Internal.New("1S internal error")
+		errorWithOut := errors.AddErrorContext(err, "out", outLog)
+		return errorWithOut
 
-	case EXITCODE_DATABASE_ERROR:
+	case 101:
 
-		return EXITCODE_DATABASE_ERROR, ERROR_RUNNING_DATABASE_ERROR
+		outLog, _ := readOut(options.Out)
+		err := errors.Database.New("1S database error")
+		errorWithOut := errors.AddErrorContext(err, "out", outLog)
+		return errorWithOut
 
 	default:
 
-		return EXITCODE_FAIL, errors.New("unknown error")
+		outLog, _ := readOut(options.Out)
+		err := errors.Invalid.New("Unknown 1S error")
+		errorWithOut := errors.AddErrorContext(err, "out", outLog)
+		return errorWithOut
+
 	}
+
 }
 
-func defaultOptions(command string) *RunOptions {
+func getWhatArgs(what types.Command) (args []string, err error) {
+
+	args, err = what.Values()
+
+	if err != nil {
+		err = errors.BadRequest.Wrap(err, "cannot get command args")
+
+	}
+
+	return
+}
+
+func appendRunOptionsArgs(in []string, options *RunOptions) (args []string) {
+
+	args = append(in, fmt.Sprintf("/Out %s", options.Out))
+
+	if options.NoTruncate {
+		args = append(args, "-NoTruncate")
+	}
+
+	args = append(args, fmt.Sprintf("/DumpResult %s", options.DumpResult))
+
+	return
+
+}
+
+func getConnectString(where types.InfoBase, what types.Command, options *RunOptions) (connectString string, err error) {
+
+	if what.Command() == COMMAND_CREATEINFOBASE {
+		connectString, err = where.CreateString()
+		if err != nil {
+			err = errors.BadConnectString.Wrap(err, "error get create database connection string")
+		}
+
+		return
+	}
+
+	if options.UseLongConnectString {
+		connectString, err = where.IBConnectionString()
+		if err != nil {
+			err = errors.BadConnectString.Wrap(err, "error get full database connection string")
+		}
+
+		return
+
+	} else {
+		connectString = where.ShortConnectString()
+	}
+
+	return
+}
+
+func defaultOptions() *RunOptions {
 
 	options := RunOptions{}
 
@@ -280,13 +346,39 @@ func defaultOptions(command string) *RunOptions {
 	return &options
 }
 
-func Run(where types.InfoBase, what types.Command, opts ...Option) (int, error) {
-
-	options := defaultOptions(what.Command())
+func getOptions(opts ...interface{}) *RunOptions {
 
 	for _, opt := range opts {
-		opt(options)
+
+		switch opt.(type) {
+
+		case RunOptions:
+			userOptions, _ := opt.(RunOptions)
+			return &userOptions
+		case *RunOptions:
+			userOptions, _ := opt.(*RunOptions)
+			return userOptions
+		}
+
 	}
+
+	return defaultOptions()
+
+}
+
+func applyRunOptions(options *RunOptions, opts ...interface{}) {
+	for _, opt := range opts {
+
+		if fn, ok := opt.(Option); ok {
+			fn(options)
+		}
+	}
+}
+
+func Run(where types.InfoBase, what types.Command, opts ...interface{}) error {
+
+	options := getOptions(opts...)
+	applyRunOptions(options, opts...)
 
 	return RunWithOptions(where, what, options)
 
